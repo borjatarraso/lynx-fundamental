@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -23,6 +21,17 @@ from textual.widgets import (
 from lynx.models import AnalysisReport, CompanyTier
 
 
+# Global counter to generate unique widget IDs per render cycle,
+# avoiding Textual duplicate-ID errors when re-rendering.
+_render_counter = 0
+
+
+def _next_prefix() -> str:
+    global _render_counter
+    _render_counter += 1
+    return f"r{_render_counter}"
+
+
 class SearchModal(ModalScreen[str]):
     """Modal dialog for entering a ticker/ISIN."""
 
@@ -31,8 +40,14 @@ class SearchModal(ModalScreen[str]):
     def compose(self) -> ComposeResult:
         with Vertical(id="search-dialog"):
             yield Label("Enter Ticker or ISIN", id="search-label")
-            yield Input(placeholder="e.g. AAPL, MSFT, OCO.V, AT1.DE", id="search-input")
-            yield Label("[dim]Press Enter to analyze, Escape to cancel[/]", id="search-hint")
+            yield Input(
+                placeholder="e.g. AAPL, MSFT, OCO.V, AT1.DE",
+                id="search-input",
+            )
+            yield Label(
+                "[dim]Press Enter to analyze, Escape to cancel[/]",
+                id="search-hint",
+            )
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.dismiss(event.value.strip() if event.value else "")
@@ -73,13 +88,13 @@ class LynxApp(App):
         margin: 4;
         height: auto;
     }
-    #profile-panel {
+    .report-container {
+        height: 1fr;
+    }
+    .profile-panel {
         height: auto;
         max-height: 12;
         margin: 0 0 1 0;
-    }
-    #report-container {
-        height: 1fr;
     }
     """
 
@@ -90,7 +105,7 @@ class LynxApp(App):
         Binding("d", "dark", "Toggle Dark"),
     ]
 
-    report: Optional[AnalysisReport] = None
+    report: AnalysisReport | None = None
     _last_identifier: str = ""
 
     def compose(self) -> ComposeResult:
@@ -107,27 +122,37 @@ class LynxApp(App):
         self.push_screen(SearchModal(), self._on_search_result)
 
     def action_dark(self) -> None:
-        self.theme = "textual-dark" if self.theme == "textual-light" else "textual-light"
+        self.theme = (
+            "textual-dark"
+            if self.theme == "textual-light"
+            else "textual-light"
+        )
 
     def action_refresh(self) -> None:
         if self._last_identifier:
             self._start_analysis(self._last_identifier, force_refresh=True)
 
     def _on_search_result(self, identifier: str) -> None:
-        if not identifier:
-            return
-        self._start_analysis(identifier)
+        if identifier:
+            self._start_analysis(identifier)
 
-    def _start_analysis(self, identifier: str, force_refresh: bool = False) -> None:
+    def _start_analysis(
+        self, identifier: str, force_refresh: bool = False
+    ) -> None:
         self._last_identifier = identifier
-        self._set_status(f"[bold cyan]Analyzing {identifier}...[/]\n\n[dim]Fetching data, please wait...[/]")
+        self._set_status(
+            f"[bold cyan]Analyzing {identifier}...[/]\n\n"
+            "[dim]Fetching data, please wait...[/]"
+        )
         self._do_analysis(identifier, force_refresh)
 
     @work(thread=True, exclusive=True)
-    def _do_analysis(self, identifier: str, force_refresh: bool = False) -> None:
-        """Run analysis in a background thread. Uses call_from_thread to update UI."""
-        from lynx.core.storage import is_testing
+    def _do_analysis(
+        self, identifier: str, force_refresh: bool = False
+    ) -> None:
+        """Run analysis in a background OS thread."""
         from lynx.core.analyzer import run_full_analysis
+        from lynx.core.storage import is_testing
 
         try:
             refresh = force_refresh or is_testing()
@@ -140,79 +165,98 @@ class LynxApp(App):
             self.report = report
             self.call_from_thread(self._render_report, report)
         except Exception as e:
-            error_msg = str(e) if str(e) else type(e).__name__
+            msg = str(e) if str(e) else type(e).__name__
             self.call_from_thread(
                 self._set_status,
-                f"[bold red]Error:[/] {error_msg}\n\n[dim]Press A to try again[/]",
+                f"[bold red]Error:[/] {msg}\n\n"
+                "[dim]Press A to try again[/]",
             )
 
+    # ---- UI state management ----
+
     def _set_status(self, message: str) -> None:
-        """Show a status message, removing any existing report widgets."""
-        self._clear_report()
+        """Show a status/error message, cleaning up any report widgets."""
+        self._destroy_reports()
         try:
-            status = self.query_one("#status-area", Static)
-            status.update(message)
-            status.display = True
+            sa = self.query_one("#status-area", Static)
+            sa.update(message)
+            sa.display = True
         except Exception:
             pass
 
-    def _clear_report(self) -> None:
-        """Safely remove all report-related widgets."""
-        for selector in ("#report-container",):
-            try:
-                self.query_one(selector).remove()
-            except Exception:
-                pass
+    def _destroy_reports(self) -> None:
+        """Remove every report container currently in the DOM."""
+        try:
+            for widget in list(self.query(".report-container")):
+                widget.remove()
+        except Exception:
+            pass
 
     def _render_report(self, report: AnalysisReport) -> None:
-        """Build and mount the full report UI. Called from the main thread."""
-        try:
-            self._clear_report()
+        """Build and mount the report UI.
 
-            # Hide status
+        Called via call_from_thread, so this runs on the main thread.
+        Uses CSS classes (not IDs) and a unique prefix per render to
+        avoid any duplicate-ID issues with Textual's widget registry.
+        """
+        try:
+            # Remove any old reports
+            self._destroy_reports()
+
+            # Hide the status area
             try:
                 self.query_one("#status-area", Static).display = False
             except Exception:
                 pass
+
+            # Unique prefix for this render cycle
+            px = _next_prefix()
 
             p = report.profile
             tier_str = _safe_tier(p.tier)
             profile_text = (
                 f"[bold]{_s(p.name)}[/] ({_s(p.ticker)})  [{tier_str}]"
                 + (f"  |  ISIN: {p.isin}" if p.isin else "")
-                + f"\n{_s(p.sector)} / {_s(p.industry)}  |  {_s(p.country)}"
+                + f"\n{_s(p.sector)} / {_s(p.industry)}"
+                + f"  |  {_s(p.country)}"
                 + f"  |  Market Cap: {_money(p.market_cap)}"
             )
 
-            tabs = TabbedContent(
-                TabPane("Valuation", _build_valuation(report), id="tab-val"),
-                TabPane("Profitability", _build_profitability(report), id="tab-prof"),
-                TabPane("Solvency", _build_solvency(report), id="tab-solv"),
-                TabPane("Growth", _build_growth(report), id="tab-growth"),
-                TabPane("Moat", _build_moat(report), id="tab-moat"),
-                TabPane("Intrinsic Value", _build_iv(report), id="tab-iv"),
-                TabPane("Financials", _build_financials(report), id="tab-fin"),
-                TabPane("Filings", _build_filings(report), id="tab-filings"),
-                TabPane("News", _build_news(report), id="tab-news"),
-            )
-
             container = Vertical(
-                Static(profile_text, id="profile-panel"),
-                tabs,
-                id="report-container",
+                Static(profile_text, classes="profile-panel"),
+                TabbedContent(
+                    TabPane("Valuation", _build_valuation(report)),
+                    TabPane("Profitability", _build_profitability(report)),
+                    TabPane("Solvency", _build_solvency(report)),
+                    TabPane("Growth", _build_growth(report)),
+                    TabPane("Moat", _build_moat(report)),
+                    TabPane("Intrinsic Value", _build_iv(report)),
+                    TabPane("Financials", _build_financials(report)),
+                    TabPane("Filings", _build_filings(report)),
+                    TabPane("News", _build_news(report)),
+                    id=f"{px}-tabs",
+                ),
+                classes="report-container",
             )
 
             self.mount(container, before=self.query_one(Footer))
 
         except Exception as e:
-            self._set_status(
-                f"[bold red]Display error:[/] {type(e).__name__}: {e}\n\n[dim]Press A to try again[/]"
-            )
+            try:
+                sa = self.query_one("#status-area", Static)
+                sa.update(
+                    f"[bold red]Display error:[/] {type(e).__name__}: {e}\n\n"
+                    "[dim]Press A to try again[/]"
+                )
+                sa.display = True
+            except Exception:
+                pass
 
 
 # ======================================================================
-# Table builders — standalone, defensive, no exceptions
+# Table builders
 # ======================================================================
+
 
 def _build_valuation(report: AnalysisReport) -> DataTable:
     v = report.valuation
@@ -220,16 +264,62 @@ def _build_valuation(report: AnalysisReport) -> DataTable:
     t.add_columns("Metric", "Value", "Assessment")
     _r3(t, "P/E (Trailing)", _num(v.pe_trailing), _ape(v.pe_trailing))
     _r3(t, "P/E (Forward)", _num(v.pe_forward), _ape(v.pe_forward))
-    _r3(t, "P/B Ratio", _num(v.pb_ratio), _thr(v.pb_ratio, [(1, "Below Book"), (1.5, "Cheap"), (3, "Fair")], "Premium"))
+    _r3(
+        t,
+        "P/B Ratio",
+        _num(v.pb_ratio),
+        _thr(
+            v.pb_ratio,
+            [(1, "Below Book"), (1.5, "Cheap"), (3, "Fair")],
+            "Premium",
+        ),
+    )
     _r3(t, "P/S Ratio", _num(v.ps_ratio), "")
-    _r3(t, "P/FCF", _num(v.p_fcf), _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive"))
-    _r3(t, "EV/EBITDA", _num(v.ev_ebitda), _thr(v.ev_ebitda, [(8, "Cheap"), (12, "Fair"), (18, "Expensive")], "Very Expensive"))
+    _r3(
+        t,
+        "P/FCF",
+        _num(v.p_fcf),
+        _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive"),
+    )
+    _r3(
+        t,
+        "EV/EBITDA",
+        _num(v.ev_ebitda),
+        _thr(
+            v.ev_ebitda,
+            [(8, "Cheap"), (12, "Fair"), (18, "Expensive")],
+            "Very Expensive",
+        ),
+    )
     _r3(t, "EV/Revenue", _num(v.ev_revenue), "")
-    _r3(t, "PEG Ratio", _num(v.peg_ratio), _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued"))
+    _r3(
+        t,
+        "PEG Ratio",
+        _num(v.peg_ratio),
+        _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued"),
+    )
     _r3(t, "Earnings Yield", _pct(v.earnings_yield), "")
     _r3(t, "Dividend Yield", _pct(v.dividend_yield), "")
-    _r3(t, "P/Tangible Book", _num(v.price_to_tangible_book), _thr(v.price_to_tangible_book, [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")], "Premium"))
-    _r3(t, "P/NCAV (Net-Net)", _num(v.price_to_ncav), _thr(v.price_to_ncav, [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")], "Above NCAV"))
+    _r3(
+        t,
+        "P/Tangible Book",
+        _num(v.price_to_tangible_book),
+        _thr(
+            v.price_to_tangible_book,
+            [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")],
+            "Premium",
+        ),
+    )
+    _r3(
+        t,
+        "P/NCAV (Net-Net)",
+        _num(v.price_to_ncav),
+        _thr(
+            v.price_to_ncav,
+            [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")],
+            "Above NCAV",
+        ),
+    )
     _r3(t, "Enterprise Value", _money(v.enterprise_value), "")
     _r3(t, "Market Cap", _money(v.market_cap), "")
     return t
@@ -292,23 +382,23 @@ def _build_moat(report: AnalysisReport) -> DataTable:
     tier = _get_tier(report)
     t = DataTable(zebra_stripes=True)
     t.add_columns("Indicator", "Assessment")
-    _r2(t, "Moat Score", f"{m.moat_score:.1f}/100" if m.moat_score is not None else "N/A")
-    _r2(t, "Competitive Position", _s(m.competitive_position))
+    _r2(t, "Score", f"{m.moat_score:.1f}/100" if m.moat_score is not None else "N/A")
+    _r2(t, "Position", _s(m.competitive_position))
 
     if tier in (CompanyTier.MEGA, CompanyTier.LARGE, CompanyTier.MID):
         _r2(t, "ROIC Consistency", _s(m.roic_consistency))
         _r2(t, "Margin Stability", _s(m.margin_stability))
         _r2(t, "Revenue Predictability", _s(m.revenue_predictability))
-        _r2(t, "Efficient Scale", _s(m.efficient_scale))
-        _r2(t, "Switching Costs", _s(m.switching_costs) if m.switching_costs else "Requires qualitative review")
-        _r2(t, "Network Effects", _s(m.network_effects) if m.network_effects else "Requires qualitative review")
-        _r2(t, "Cost Advantages", _s(m.cost_advantages) if m.cost_advantages else "Not detected")
-        _r2(t, "Intangible Assets", _s(m.intangible_assets) if m.intangible_assets else "Not detected")
+        _r2(t, "Scale", _s(m.efficient_scale))
+        _r2(t, "Switching Costs", _s(m.switching_costs) or "Review needed")
+        _r2(t, "Network Effects", _s(m.network_effects) or "Review needed")
+        _r2(t, "Cost Advantages", _s(m.cost_advantages) or "Not detected")
+        _r2(t, "Intangible Assets", _s(m.intangible_assets) or "Not detected")
     else:
         _r2(t, "Asset Backing", _s(m.asset_backing))
         _r2(t, "Revenue Status", _s(m.revenue_predictability))
         _r2(t, "Niche Position", _s(m.niche_position))
-        _r2(t, "Dilution / Insider", _s(m.insider_alignment))
+        _r2(t, "Dilution/Insider", _s(m.insider_alignment))
         if m.intangible_assets:
             _r2(t, "Intangible Assets", _s(m.intangible_assets))
         if m.cost_advantages:
@@ -317,7 +407,7 @@ def _build_moat(report: AnalysisReport) -> DataTable:
     if m.roic_history:
         _r2(t, "ROIC Trend", " -> ".join(_pctplain(r) for r in reversed(m.roic_history)))
     if m.gross_margin_history:
-        _r2(t, "Gross Margin Trend", " -> ".join(_pctplain(r) for r in reversed(m.gross_margin_history)))
+        _r2(t, "GM Trend", " -> ".join(_pctplain(r) for r in reversed(m.gross_margin_history)))
     return t
 
 
@@ -339,7 +429,7 @@ def _build_iv(report: AnalysisReport) -> DataTable:
     _r3(t, f"{tag('DCF')}DCF (10Y)", f"${iv.dcf_value:.2f}" if iv.dcf_value else "N/A", _mos(iv.margin_of_safety_dcf))
     _r3(t, f"{tag('Graham')}Graham Number", f"${iv.graham_number:.2f}" if iv.graham_number else "N/A", _mos(iv.margin_of_safety_graham))
     _r3(t, f"{tag('NCAV')}NCAV (Net-Net)", f"${iv.ncav_value:.4f}" if iv.ncav_value is not None else "N/A", _mos(iv.margin_of_safety_ncav))
-    _r3(t, f"{tag('Asset')}Tangible Book/Share", f"${iv.asset_based_value:.4f}" if iv.asset_based_value else "N/A", _mos(iv.margin_of_safety_asset))
+    _r3(t, f"{tag('Asset')}Tangible Book", f"${iv.asset_based_value:.4f}" if iv.asset_based_value else "N/A", _mos(iv.margin_of_safety_asset))
     if iv.lynch_fair_value:
         _r3(t, "Lynch Fair Value", f"${iv.lynch_fair_value:.2f}", "")
     return t
@@ -352,16 +442,20 @@ def _build_financials(report: AnalysisReport) -> DataTable:
         t.add_row(
             _s(st.period), _money(st.revenue), _money(st.gross_profit),
             _money(st.operating_income), _money(st.net_income),
-            _money(st.free_cash_flow), _money(st.total_equity), _money(st.total_debt),
+            _money(st.free_cash_flow), _money(st.total_equity),
+            _money(st.total_debt),
         )
     return t
 
 
 def _build_filings(report: AnalysisReport) -> DataTable:
     t = DataTable(zebra_stripes=True)
-    t.add_columns("Type", "Filed", "Period", "Downloaded")
+    t.add_columns("Type", "Filed", "Period", "Saved")
     for f in (report.filings or [])[:20]:
-        t.add_row(_s(f.form_type), _s(f.filing_date), _s(f.period), "Yes" if f.local_path else "No")
+        t.add_row(
+            _s(f.form_type), _s(f.filing_date), _s(f.period),
+            "Yes" if f.local_path else "No",
+        )
     return t
 
 
@@ -369,30 +463,27 @@ def _build_news(report: AnalysisReport) -> DataTable:
     t = DataTable(zebra_stripes=True)
     t.add_columns("#", "Title", "Source", "Date")
     for i, n in enumerate((report.news or [])[:20], 1):
-        title_raw = n.title or ""
-        title = title_raw[:70] + ("..." if len(title_raw) > 70 else "")
+        raw = n.title or ""
+        title = raw[:70] + ("..." if len(raw) > 70 else "")
         t.add_row(str(i), title, _s(n.source), _s(n.published))
     return t
 
 
 # ======================================================================
-# Safe helpers — NEVER raise, ALWAYS return str
+# Safe formatters
 # ======================================================================
 
+
 def _r3(table: DataTable, c1: str, c2: str, c3: str) -> None:
-    """Add a 3-column row. Guarantees string values."""
     table.add_row(str(c1), str(c2), str(c3))
 
 
 def _r2(table: DataTable, c1: str, c2: str) -> None:
-    """Add a 2-column row. Guarantees string values."""
     table.add_row(str(c1), str(c2))
 
 
 def _s(val) -> str:
-    if val is None:
-        return "N/A"
-    return str(val)
+    return str(val) if val is not None else "N/A"
 
 
 def _num(val, digits: int = 2) -> str:
@@ -457,11 +548,16 @@ def _ape(val) -> str:
         return ""
     try:
         v = float(val)
-        if v < 0: return "Negative earnings"
-        if v < 10: return "Very cheap"
-        if v < 15: return "Value range"
-        if v < 20: return "Fair"
-        if v < 30: return "Expensive"
+        if v < 0:
+            return "Negative earnings"
+        if v < 10:
+            return "Very cheap"
+        if v < 15:
+            return "Value range"
+        if v < 20:
+            return "Fair"
+        if v < 30:
+            return "Expensive"
         return "Very expensive"
     except Exception:
         return ""
@@ -472,8 +568,10 @@ def _burn(val) -> str:
         return ""
     try:
         v = float(val)
-        if v == 0: return "Not burning cash"
-        if v < 0: return "Burning cash"
+        if v == 0:
+            return "Not burning cash"
+        if v < 0:
+            return "Burning cash"
         return "Cash flow positive"
     except Exception:
         return ""
