@@ -12,7 +12,7 @@ A command-line tool for fundamental analysis focused on **value investing** and 
 - **News aggregation** — Yahoo Finance + Google News RSS, deduplicated
 - **Multi-exchange support** — US (NYSE, NASDAQ, OTC), Canada (TSXV, TSX), Europe (XETRA, LSE, Euronext), Asia-Pacific, and 30+ exchange suffixes
 - **ISIN and company name resolution** — search by ISIN, ticker, or free-text company name
-- **Local data cache** — all data stored under `data/` folder; cached analyses are reused automatically, with `--refresh` to force update and `--drop-cache` to clean up
+- **Local data cache** — production data under `data/`, test data under `data_test/` (fully isolated); cached analyses reused automatically in production mode, with `--refresh` to force update and `--drop-cache` to clean up
 - **Three interfaces** — direct CLI, interactive prompt mode (`-i`), and Textual terminal UI (`-tui`)
 
 ## Installation
@@ -26,55 +26,75 @@ pip install -e .
 - Python >= 3.10
 - yfinance, requests, beautifulsoup4, rich, textual, feedparser, pandas, numpy
 
+## Execution Modes
+
+The tool requires one of two execution modes:
+
+| Mode | Flag | Data Directory | Cache Behavior |
+|------|------|---------------|----------------|
+| **Production** | `-p` / `--production-mode` | `data/` | Cache-first (reuses saved data) |
+| **Testing** | `-t` / `--testing-mode` | `data_test/` | Always fresh (never reads cache) |
+
+**Production mode** stores and reuses data under `data/`. Subsequent analyses of the same ticker load instantly from cache. Use `--refresh` to force a fresh download.
+
+**Testing mode** uses a completely isolated `data_test/` directory. It always fetches fresh data from the network — production data is never read from or written to. Ideal for testing, development, and running automated tests without risk to production data.
+
 ## Quick Start
 
 ```bash
-# Analyze a company (uses cached data if available)
-lynx-fa AAPL
+# Production: analyze (uses cache if available)
+lynx-fa -p AAPL
 
-# Force fresh data download
-lynx-fa MSFT --refresh
+# Production: force fresh data download
+lynx-fa -p AAPL --refresh
+
+# Testing: always fetches fresh, writes to data_test/
+lynx-fa -t AAPL
 
 # Analyze TSXV / OTC / international stocks
-lynx-fa OCO.V                    # TSXV (Oroco Resource)
-lynx-fa AT1.DE                   # XETRA (Aroundtown)
-lynx-fa ORRCF                    # OTC Pink
-lynx-fa "F3 Uranium"             # Search by company name
+lynx-fa -p OCO.V                 # TSXV (Oroco Resource)
+lynx-fa -p AT1.DE                # XETRA (Aroundtown)
+lynx-fa -p ORRCF                 # OTC Pink
+lynx-fa -p "F3 Uranium"          # Search by company name
 
 # Search for a company across exchanges
-lynx-fa -s "Aroundtown"
+lynx-fa -p -s "Aroundtown"
 
 # Launch interactive mode
-lynx-fa -i
+lynx-fa -p -i                    # Production interactive
+lynx-fa -t -i                    # Testing interactive
 
 # Launch terminal UI
-lynx-fa -tui
+lynx-fa -p -tui
 
-# Cache management
-lynx-fa --list-cache             # Show cached tickers with age/size
-lynx-fa --drop-cache AAPL        # Remove one ticker's data
-lynx-fa --drop-cache ALL         # Clear all cached data
+# Cache management (mode-specific)
+lynx-fa -p --list-cache          # Show production cached tickers
+lynx-fa -t --list-cache          # Show test cached tickers
+lynx-fa -p --drop-cache AAPL     # Remove production data for AAPL
+lynx-fa -t --drop-cache ALL      # Clear all test data
 
 # Skip reports or news
-lynx-fa GOOG --no-reports --no-news
+lynx-fa -p GOOG --no-reports --no-news
 ```
 
 ## CLI Reference
 
 ```
-usage: lynx-fa [-h] [-i | -tui | -s] [--refresh] [--drop-cache [TICKER]]
-               [--list-cache] [--no-reports] [--no-news] [--max-filings N]
-               [--verbose] [--version]
+usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s] [--refresh]
+               [--drop-cache [TICKER]] [--list-cache] [--no-reports]
+               [--no-news] [--max-filings N] [--verbose] [--version]
                [identifier]
 ```
 
 | Flag | Description |
 |------|-------------|
+| `-p`, `--production-mode` | **Required.** Production mode (data/, cache-first) |
+| `-t`, `--testing-mode` | **Required.** Testing mode (data_test/, always fresh) |
 | `identifier` | Ticker symbol, ISIN, or company name |
 | `-i`, `--interactive-mode` | Launch interactive prompt mode |
 | `-tui`, `--textual-ui` | Launch Textual terminal UI |
 | `-s`, `--search` | Search for a company across exchanges |
-| `--refresh` | Force fresh data download (ignore cache) |
+| `--refresh` | Force fresh data download (production mode only) |
 | `--drop-cache TICKER` | Remove cached data for a ticker (or `ALL`) |
 | `--list-cache` | Show all cached tickers with metadata |
 | `--no-reports` | Skip SEC filing download |
@@ -127,7 +147,7 @@ DCF (10-year), Graham Number, NCAV Net-Net (Benjamin Graham), Peter Lynch Fair V
 
 ## Data Storage
 
-All data is stored locally under `data/<TICKER>/`:
+Data is stored locally. Production mode uses `data/`, testing mode uses `data_test/`:
 
 ```
 data/
@@ -147,7 +167,7 @@ data/
       news_index.json
 ```
 
-Subsequent runs reuse cached data automatically. Use `--refresh` to force a fresh download or `--drop-cache` to remove stale data.
+In production mode, subsequent runs reuse cached data automatically. Use `--refresh` to force a fresh download or `--drop-cache` to remove stale data. In testing mode, every run fetches fresh data and the test directory can be safely wiped at any time.
 
 ## Interactive Mode Commands
 
@@ -191,7 +211,8 @@ lynx-fa-analysis/
 │   │   └── relevance.py     # Metric relevance per company tier
 │   └── tui/
 │       └── app.py           # Textual terminal UI
-└── data/                    # Local data storage (gitignored)
+├── data/                    # Production data storage (gitignored)
+└── data_test/               # Testing data storage (gitignored)
 ```
 
 ## License

@@ -1,5 +1,6 @@
 # Data cache (local only)
 data/
+data_test/
 
 # Python
 __pycache__/

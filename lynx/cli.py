@@ -14,23 +14,43 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Lynx Fundamental Analysis — Value investing research tool.\n"
             "Fetch, calculate, and display fundamental metrics, SEC filings,\n"
-            "and news for any publicly traded company by ticker or ISIN."
+            "and news for any publicly traded company by ticker or ISIN.\n\n"
+            "One of --production-mode (-p) or --testing-mode (-t) is required."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  lynx-fa AAPL                         Analyze (uses cache if available)\n"
-            "  lynx-fa AAPL --refresh                Force fresh data download\n"
-            "  lynx-fa MSFT --no-reports             Skip downloading SEC filings\n"
-            "  lynx-fa OCO.V                         Analyze TSXV stock\n"
-            '  lynx-fa "Oroco Resource"              Search by company name\n'
-            "  lynx-fa -s AT1                        Search for AT1 across exchanges\n"
-            "  lynx-fa --list-cache                  Show all cached tickers\n"
-            "  lynx-fa --drop-cache AAPL             Remove cached data for AAPL\n"
-            "  lynx-fa --drop-cache ALL              Remove all cached data\n"
-            "  lynx-fa -i                            Launch interactive mode\n"
-            "  lynx-fa -tui                          Launch Textual UI\n"
+            "  lynx-fa -p AAPL                       Production analysis (uses cache)\n"
+            "  lynx-fa -p AAPL --refresh              Force fresh data download\n"
+            "  lynx-fa -t AAPL                        Testing analysis (fresh, isolated)\n"
+            "  lynx-fa -p OCO.V                       Analyze TSXV stock\n"
+            '  lynx-fa -p "Oroco Resource"            Search by company name\n'
+            "  lynx-fa -p -s AT1                      Search for AT1 across exchanges\n"
+            "  lynx-fa -p --list-cache                Show cached tickers\n"
+            "  lynx-fa -p --drop-cache AAPL           Remove cached data for AAPL\n"
+            "  lynx-fa -p --drop-cache ALL            Remove all cached data\n"
+            "  lynx-fa -t --drop-cache ALL            Remove all test data\n"
+            "  lynx-fa -p -i                          Interactive mode (production)\n"
+            "  lynx-fa -t -i                          Interactive mode (testing)\n"
+            "  lynx-fa -p -tui                        Textual UI (production)\n"
         ),
+    )
+
+    # --- Required: execution mode ---
+    run_mode = parser.add_mutually_exclusive_group(required=True)
+    run_mode.add_argument(
+        "-p", "--production-mode",
+        action="store_const",
+        const="production",
+        dest="run_mode",
+        help="Production mode: use data/ for persistent cache and storage",
+    )
+    run_mode.add_argument(
+        "-t", "--testing-mode",
+        action="store_const",
+        const="testing",
+        dest="run_mode",
+        help="Testing mode: use data_test/ (isolated, always fresh, never touches production data)",
     )
 
     parser.add_argument(
@@ -39,31 +59,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ticker symbol (e.g. AAPL) or ISIN (e.g. US0378331005)",
     )
 
-    # Mode flags
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
+    # --- Interface mode ---
+    ui_mode = parser.add_mutually_exclusive_group()
+    ui_mode.add_argument(
         "-i", "--interactive-mode",
         action="store_true",
         dest="interactive",
         help="Launch interactive prompt mode",
     )
-    mode.add_argument(
+    ui_mode.add_argument(
         "-tui", "--textual-ui",
         action="store_true",
         dest="tui",
         help="Launch the Textual terminal UI",
     )
-    mode.add_argument(
+    ui_mode.add_argument(
         "-s", "--search",
         action="store_true",
         help="Search for a company (use with identifier as query)",
     )
 
-    # Data / cache options
+    # --- Data / cache options ---
     parser.add_argument(
         "--refresh",
         action="store_true",
-        help="Force fresh data download (ignore cache)",
+        help="Force fresh data download (ignore cache, production mode only)",
     )
     parser.add_argument(
         "--drop-cache",
@@ -78,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="List all cached tickers and their data age",
     )
 
-    # Analysis options
+    # --- Analysis options ---
     parser.add_argument(
         "--no-reports",
         action="store_true",
@@ -118,6 +138,13 @@ def run_cli() -> None:
     from rich.console import Console
     errc = Console(stderr=True)
 
+    # --- Activate storage mode FIRST, before any data access ---
+    from lynx.core.storage import set_mode, is_testing
+    set_mode(args.run_mode)
+
+    mode_label = "[bold green]PRODUCTION[/]" if args.run_mode == "production" else "[bold yellow]TESTING[/]"
+    errc.print(f"Mode: {mode_label}")
+
     # --- Cache management commands ---
     if args.list_cache:
         _cmd_list_cache(errc)
@@ -126,7 +153,6 @@ def run_cli() -> None:
     if args.drop_cache is not None:
         target = args.drop_cache
         if target == "__prompt__":
-            # --drop-cache was used without a value; use identifier if provided
             target = args.identifier or ""
         if not target:
             errc.print("[bold red]Error:[/] Specify a ticker or ALL. E.g. --drop-cache AAPL")
@@ -134,7 +160,7 @@ def run_cli() -> None:
         _cmd_drop_cache(errc, target)
         return
 
-    # --- Mode dispatch ---
+    # --- Interface dispatch ---
     if args.interactive:
         from lynx.interactive import run_interactive
         run_interactive()
@@ -162,6 +188,9 @@ def run_cli() -> None:
         sys.exit(1)
 
     # --- Direct CLI analysis ---
+    # In testing mode: always fresh (refresh is implicit)
+    refresh = args.refresh or is_testing()
+
     from lynx.core.analyzer import run_full_analysis
     from lynx.display import display_full_report
 
@@ -172,7 +201,7 @@ def run_cli() -> None:
             download_news=not args.no_news,
             max_filings=args.max_filings,
             verbose=args.verbose,
-            refresh=args.refresh,
+            refresh=refresh,
         )
         display_full_report(report)
     except ValueError as e:
@@ -187,14 +216,15 @@ def run_cli() -> None:
 
 def _cmd_list_cache(con) -> None:
     from rich.table import Table
-    from lynx.core.storage import list_cached_tickers
+    from lynx.core.storage import list_cached_tickers, get_mode
 
     tickers = list_cached_tickers()
     if not tickers:
-        con.print("[yellow]No cached data found.[/]")
+        con.print(f"[yellow]No cached data found ({get_mode()} mode).[/]")
         return
 
-    t = Table(title="Cached Data", border_style="cyan")
+    title = f"Cached Data ({get_mode()} mode)"
+    t = Table(title=title, border_style="cyan")
     t.add_column("Ticker", style="bold cyan")
     t.add_column("Company")
     t.add_column("Tier")
@@ -229,13 +259,14 @@ def _cmd_list_cache(con) -> None:
 
 
 def _cmd_drop_cache(con, target: str) -> None:
-    from lynx.core.storage import drop_cache_all, drop_cache_ticker
+    from lynx.core.storage import drop_cache_all, drop_cache_ticker, get_mode
 
+    label = f"({get_mode()} mode)"
     if target.upper() == "ALL":
         count = drop_cache_all()
-        con.print(f"[bold green]Removed all cached data ({count} tickers).[/]")
+        con.print(f"[bold green]Removed all cached data {label} ({count} tickers).[/]")
     else:
         if drop_cache_ticker(target):
-            con.print(f"[bold green]Removed cached data for {target.upper()}.[/]")
+            con.print(f"[bold green]Removed cached data for {target.upper()} {label}.[/]")
         else:
-            con.print(f"[yellow]No cached data found for '{target.upper()}'.[/]")
+            con.print(f"[yellow]No cached data found for '{target.upper()}' {label}.[/]")

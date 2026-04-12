@@ -5,13 +5,19 @@ Lynx FA can be used as a Python library in addition to the CLI. This document co
 ## Quick Example
 
 ```python
+from lynx.core.storage import set_mode
 from lynx.core.analyzer import run_full_analysis
 from lynx.display import display_full_report
 
-# Run analysis (uses cache if available)
+# IMPORTANT: set mode before any data operations
+set_mode("production")  # uses data/ with cache
+# or
+set_mode("testing")     # uses data_test/, always fresh
+
+# Run analysis (production: uses cache if available)
 report = run_full_analysis("AAPL")
 
-# Force fresh data
+# Force fresh data (or use testing mode which is always fresh)
 report = run_full_analysis("AAPL", refresh=True)
 
 # Display in terminal
@@ -141,12 +147,26 @@ Downloads and extracts text content from a news article URL.
 
 ### `lynx.core.storage`
 
+#### Mode Management
+
+```python
+from lynx.core.storage import set_mode, get_mode, is_testing
+
+set_mode("production")  # All paths route to data/
+set_mode("testing")     # All paths route to data_test/
+
+get_mode()              # -> "production" or "testing"
+is_testing()            # -> bool
+```
+
+**Important:** Call `set_mode()` before any other storage operation. All path functions, cache reads, and cache writes are routed through the current mode. In testing mode, `has_cache()` and `load_cached_report()` always return `False`/`None` to guarantee fresh fetches.
+
 #### Cache Management
 
 ```python
 from lynx.core.storage import (
-    has_cache,           # has_cache("AAPL") -> bool
-    load_cached_report,  # load_cached_report("AAPL") -> dict | None
+    has_cache,           # has_cache("AAPL") -> bool (always False in testing)
+    load_cached_report,  # load_cached_report("AAPL") -> dict | None (always None in testing)
     get_cache_age_hours, # get_cache_age_hours("AAPL") -> float | None
     drop_cache_ticker,   # drop_cache_ticker("AAPL") -> bool
     drop_cache_all,      # drop_cache_all() -> int (count removed)
@@ -156,10 +176,12 @@ from lynx.core.storage import (
 
 #### File Paths
 
+All paths are mode-dependent. In production mode they resolve under `data/`, in testing mode under `data_test/`.
+
 ```python
 from lynx.core.storage import (
-    get_data_root,      # -> Path("data/")
-    get_company_dir,    # get_company_dir("AAPL") -> Path("data/AAPL/")
+    get_data_root,      # -> Path("data/") or Path("data_test/")
+    get_company_dir,    # get_company_dir("AAPL") -> Path("data/AAPL/") or Path("data_test/AAPL/")
     get_reports_dir,    # -> Path("data/AAPL/reports/")
     get_news_dir,       # -> Path("data/AAPL/news/")
     get_financials_dir, # -> Path("data/AAPL/financials/")

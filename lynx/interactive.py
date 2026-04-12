@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt, IntPrompt
@@ -29,7 +27,7 @@ BANNER = """
 
 MENU = """
 [bold cyan]Analysis:[/]
-  [bold]analyze[/] <TICKER|ISIN|NAME>  Analyze (uses cached data if available)
+  [bold]analyze[/] <TICKER|ISIN|NAME>  Analyze (uses cache in production mode)
   [bold]refresh[/] <TICKER|ISIN|NAME>  Force fresh data download
   [bold]search[/] <query>              Search for a company
 
@@ -50,22 +48,40 @@ MENU = """
 [bold cyan]Other:[/]
   [bold]help[/]                        Show this menu
   [bold]quit[/]                        Exit
-
-[dim]Tip: You can use tickers like OCO.V (TSXV), AT1.DE (XETRA), ORRCF (OTC),
-     or just type a company name like 'Oroco Resource Corp'.[/]
 """
 
 
 def run_interactive() -> None:
     """Run the interactive prompt loop."""
+    from lynx.core.storage import get_mode, is_testing
+
     console.print(BANNER)
+
+    mode = get_mode()
+    if is_testing():
+        console.print(Panel(
+            "[bold yellow]TESTING MODE[/]\n"
+            "Data is stored in [bold]data_test/[/] — production data is never touched.\n"
+            "All fetches are fresh (cache is not used).",
+            border_style="yellow",
+        ))
+    else:
+        console.print(Panel(
+            "[bold green]PRODUCTION MODE[/]\n"
+            "Data is stored in [bold]data/[/] — cached analyses are reused automatically.\n"
+            "Use [bold]refresh[/] to force a fresh download.",
+            border_style="green",
+        ))
+
     console.print(Panel(MENU, border_style="cyan", title="[bold]Interactive Mode[/]"))
 
     current_report: AnalysisReport | None = None
 
     while True:
+        prompt_color = "yellow" if is_testing() else "cyan"
+        prompt_suffix = " [test]" if is_testing() else ""
         try:
-            raw = Prompt.ask("\n[bold cyan]lynx-fa[/]").strip()
+            raw = Prompt.ask(f"\n[bold {prompt_color}]lynx-fa{prompt_suffix}[/]").strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\n[dim]Goodbye![/]")
             break
@@ -99,7 +115,7 @@ def run_interactive() -> None:
                 console.print(f"[yellow]No results for '{arg}'.[/]")
 
         elif cmd in ("analyze", "refresh"):
-            force_refresh = cmd == "refresh"
+            force_refresh = (cmd == "refresh") or is_testing()
             if not arg:
                 arg = Prompt.ask("[bold]Enter ticker, ISIN, or company name[/]")
             if not arg:
@@ -204,24 +220,24 @@ def run_interactive() -> None:
             _drop_cache(arg)
 
         else:
-            # Try treating the entire input as a ticker
             console.print(f"[dim]Unknown command '{cmd}'. Trying as ticker...[/]")
             try:
-                current_report = run_full_analysis(identifier=raw)
+                force = is_testing()
+                current_report = run_full_analysis(identifier=raw, refresh=force)
                 display_full_report(current_report)
             except Exception:
                 console.print("[red]Unknown command. Type 'help' for available commands.[/]")
 
 
 def _show_cache() -> None:
-    from lynx.core.storage import list_cached_tickers
+    from lynx.core.storage import list_cached_tickers, get_mode
 
     tickers = list_cached_tickers()
     if not tickers:
-        console.print("[yellow]No cached data.[/]")
+        console.print(f"[yellow]No cached data ({get_mode()} mode).[/]")
         return
 
-    t = Table(title="Cached Data", border_style="cyan")
+    t = Table(title=f"Cached Data ({get_mode()} mode)", border_style="cyan")
     t.add_column("Ticker", style="bold cyan")
     t.add_column("Company")
     t.add_column("Tier")
@@ -253,13 +269,14 @@ def _show_cache() -> None:
 
 
 def _drop_cache(target: str) -> None:
-    from lynx.core.storage import drop_cache_all, drop_cache_ticker
+    from lynx.core.storage import drop_cache_all, drop_cache_ticker, get_mode
 
+    label = f"({get_mode()} mode)"
     if target.lower() == "all":
         count = drop_cache_all()
-        console.print(f"[bold green]Removed all cached data ({count} tickers).[/]")
+        console.print(f"[bold green]Removed all cached data {label} ({count} tickers).[/]")
     else:
         if drop_cache_ticker(target):
-            console.print(f"[bold green]Removed cached data for {target.upper()}.[/]")
+            console.print(f"[bold green]Removed cached data for {target.upper()} {label}.[/]")
         else:
-            console.print(f"[yellow]No cached data found for '{target.upper()}'.[/]")
+            console.print(f"[yellow]No cached data found for '{target.upper()}' {label}.[/]")
