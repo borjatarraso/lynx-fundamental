@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from lynx import __version__
+from lynx import __author__, __version__, __year__
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -104,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {__version__}",
+        version=f"%(prog)s {__version__} ({__year__}) by {__author__}",
     )
 
     return parser
