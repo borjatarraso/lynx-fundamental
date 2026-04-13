@@ -66,6 +66,7 @@ GROWTH_RELEVANCE: dict[str, dict[CompanyTier, Relevance]] = {
     "revenue_cagr_5y":        {CompanyTier.MEGA: C, CompanyTier.LARGE: C, CompanyTier.MID: R, CompanyTier.SMALL: X, CompanyTier.MICRO: I, CompanyTier.NANO: I},
     "earnings_growth_yoy":    {CompanyTier.MEGA: R, CompanyTier.LARGE: R, CompanyTier.MID: R, CompanyTier.SMALL: R, CompanyTier.MICRO: X, CompanyTier.NANO: I},
     "earnings_cagr_3y":       {CompanyTier.MEGA: C, CompanyTier.LARGE: C, CompanyTier.MID: R, CompanyTier.SMALL: X, CompanyTier.MICRO: I, CompanyTier.NANO: I},
+    "earnings_cagr_5y":       {CompanyTier.MEGA: C, CompanyTier.LARGE: C, CompanyTier.MID: R, CompanyTier.SMALL: X, CompanyTier.MICRO: I, CompanyTier.NANO: I},
     "shares_growth_yoy":      {CompanyTier.MEGA: X, CompanyTier.LARGE: X, CompanyTier.MID: R, CompanyTier.SMALL: C, CompanyTier.MICRO: C, CompanyTier.NANO: C},
 }
 

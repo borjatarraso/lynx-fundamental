@@ -276,6 +276,7 @@ def _display_growth(report: AnalysisReport) -> None:
     _add_metric_row(t, "Revenue CAGR (5Y)", fmt_pct(g.revenue_cagr_5y), "", rel("revenue_cagr_5y"))
     _add_metric_row(t, "Earnings Growth (YoY)", fmt_pct(g.earnings_growth_yoy), "", rel("earnings_growth_yoy"))
     _add_metric_row(t, "Earnings CAGR (3Y)", fmt_pct(g.earnings_cagr_3y), "", rel("earnings_cagr_3y"))
+    _add_metric_row(t, "Earnings CAGR (5Y)", fmt_pct(g.earnings_cagr_5y), "", rel("earnings_cagr_5y"))
     _add_metric_row(t, "FCF Growth (YoY)", fmt_pct(g.fcf_growth_yoy), "", Relevance.RELEVANT)
     _add_metric_row(t, "Book Value Growth (YoY)", fmt_pct(g.book_value_growth_yoy), "", Relevance.RELEVANT)
 

@@ -33,6 +33,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  lynx-fa -p -i                          Interactive mode (production)\n"
             "  lynx-fa -t -i                          Interactive mode (testing)\n"
             "  lynx-fa -p -tui                        Textual UI (production)\n"
+            "  lynx-fa -p -x                          Graphical UI (production)\n"
+            "  lynx-fa -p -x AAPL                     Graphical UI with pre-filled ticker\n"
         ),
     )
 
@@ -77,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
         "-s", "--search",
         action="store_true",
         help="Search for a company (use with identifier as query)",
+    )
+    ui_mode.add_argument(
+        "-x", "--gui",
+        action="store_true",
+        help="Launch the graphical user interface (Tkinter)",
     )
 
     # --- Data / cache options ---
@@ -169,6 +176,11 @@ def run_cli() -> None:
     if args.tui:
         from lynx.tui.app import run_tui
         run_tui()
+        return
+
+    if args.gui:
+        from lynx.gui.app import run_gui
+        run_gui(args)
         return
 
     if args.search:
