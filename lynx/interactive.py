@@ -39,7 +39,7 @@ MENU = """
   [bold]download-news[/] <N>           Download news article #N
   [bold]open-news[/] <N>              Open news article #N in browser
   [bold]summary[/]                     Show moat + intrinsic value summary
-  [bold]export[/]                      Show data export path
+  [bold]export[/] <txt|html|pdf>       Export report to file
 
 [bold cyan]Cache:[/]
   [bold]cache[/]                       List all cached tickers
@@ -282,11 +282,20 @@ def run_interactive() -> None:
 
         elif cmd == "export":
             if not current_report:
-                console.print("[yellow]No analysis loaded.[/]")
-            else:
-                from lynx.core.storage import get_company_dir
-                d = get_company_dir(current_report.profile.ticker)
-                console.print(f"[green]Data directory:[/] {d}")
+                console.print("[yellow]No analysis loaded. Run 'analyze <TICKER>' first.[/]")
+                continue
+            fmt = arg.lower() if arg else ""
+            if fmt not in ("txt", "html", "pdf"):
+                console.print("[yellow]Usage: export <txt|html|pdf>[/]")
+                continue
+            try:
+                from lynx.export import ExportFormat, export_report
+                path = export_report(current_report, ExportFormat(fmt))
+                console.print(f"[bold green]Exported to:[/] {path}")
+            except RuntimeError as e:
+                console.print(f"[bold red]Export failed:[/] {e}")
+            except Exception as e:
+                console.print(f"[bold red]Error:[/] {type(e).__name__}: {e}")
 
         elif cmd == "cache":
             _show_cache()

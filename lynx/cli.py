@@ -135,6 +135,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable verbose output",
     )
     parser.add_argument(
+        "--export",
+        choices=["txt", "html", "pdf"],
+        metavar="FORMAT",
+        help="Export report to file (txt, html, or pdf)",
+    )
+    parser.add_argument(
+        "--output",
+        metavar="PATH",
+        help="Output file path for export (default: auto-generated in data dir)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__} ({__year__}) by {__author__}",
@@ -248,6 +259,17 @@ def run_cli() -> None:
             refresh=refresh,
         )
         display_full_report(report)
+
+        if args.export:
+            from pathlib import Path
+            from lynx.export import ExportFormat, export_report
+            fmt = ExportFormat(args.export)
+            out = Path(args.output) if args.output else None
+            try:
+                path = export_report(report, fmt, out)
+                errc.print(f"[bold green]Exported to:[/] {path}")
+            except RuntimeError as e:
+                errc.print(f"[bold red]Export failed:[/] {e}")
     except ValueError as e:
         errc.print(f"[bold red]Error:[/] {e}")
         sys.exit(1)

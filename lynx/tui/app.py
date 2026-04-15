@@ -120,6 +120,30 @@ class MetricListModal(ModalScreen[str]):
 
 
 # ======================================================================
+# Export format modal
+# ======================================================================
+
+class ExportModal(ModalScreen[str]):
+    BINDINGS = [Binding("escape", "dismiss_modal", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="export-dialog"):
+            yield Label("[bold]Export Report[/]", id="export-title")
+            with Horizontal(id="export-buttons"):
+                yield Button("TXT", id="export-txt", variant="primary")
+                yield Button("HTML", id="export-html", variant="primary")
+                yield Button("PDF", id="export-pdf", variant="primary")
+            yield Label("[dim]Select format, or Escape to cancel[/]", id="export-hint")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        fmt = event.button.id.replace("export-", "")
+        self.dismiss(fmt)
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss("")
+
+
+# ======================================================================
 # Search modal
 # ======================================================================
 
@@ -378,6 +402,31 @@ class LynxApp(App):
         text-align: center;
         margin-top: 1;
     }
+    #export-dialog {
+        width: 50;
+        height: auto;
+        max-height: 10;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+        margin: 6 10;
+    }
+    #export-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    #export-buttons {
+        align-horizontal: center;
+        height: auto;
+    }
+    #export-buttons Button {
+        margin: 0 1;
+    }
+    #export-hint {
+        text-align: center;
+        margin-top: 1;
+    }
     """
 
     BINDINGS = [
@@ -387,6 +436,7 @@ class LynxApp(App):
         Binding("d", "dark", "Toggle Dark"),
         Binding("f1", "about", "About"),
         Binding("e", "explain", "Explain Metric"),
+        Binding("x", "export", "Export"),
         Binding("tab", "focus_next", "Next Tab", show=True),
         Binding("shift+tab", "focus_previous", "Prev Tab", show=True),
         Binding("escape", "app.focus('status-area')", "Back", show=False),
@@ -412,6 +462,32 @@ class LynxApp(App):
 
     def action_about(self) -> None:
         self.push_screen(AboutModal())
+
+    def action_export(self) -> None:
+        if not self.report:
+            self._set_status("[yellow]No analysis loaded. Press A to analyze first.[/]")
+            return
+        self.push_screen(ExportModal(), self._on_export_result)
+
+    def _on_export_result(self, fmt: str) -> None:
+        if not fmt or not self.report:
+            return
+        self._do_export(fmt)
+
+    @work(thread=True)
+    def _do_export(self, fmt: str) -> None:
+        from lynx.export import ExportFormat, export_report
+        try:
+            path = export_report(self.report, ExportFormat(fmt))
+            self.call_from_thread(
+                self.push_screen,
+                DownloadResultDialog(f"Report exported to:\n{path}", success=True),
+            )
+        except Exception as e:
+            self.call_from_thread(
+                self.push_screen,
+                DownloadResultDialog(f"Export failed: {e}", success=False),
+            )
 
     def action_explain(self) -> None:
         self.push_screen(MetricListModal(), self._on_explain_result)

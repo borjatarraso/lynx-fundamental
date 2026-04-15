@@ -405,6 +405,16 @@ class LynxFAGUI:
         )
         self.btn_collapse.pack(side=tk.RIGHT, padx=(2, 0))
 
+        # Export button
+        self.btn_export = tk.Button(
+            toolbar, text="  Export  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._on_export,
+        )
+        self.btn_export.pack(side=tk.LEFT, padx=(0, 6))
+
         # About button (right side, before expand/collapse)
         self.btn_about = tk.Button(
             toolbar, text="  About  ", font=FONT_BTN,
@@ -528,6 +538,53 @@ class LynxFAGUI:
         self.status_var.set("")
         self._show_welcome()
         self.entry_ticker.focus_set()
+
+    def _on_export(self) -> None:
+        if not self._current_report:
+            self.status_var.set(f"{WARN_ICON}  Analyze a stock first")
+            return
+
+        from tkinter import filedialog
+        fmt = tk.StringVar(value="html")
+        win = tk.Toplevel(self.root)
+        win.title("Export Report")
+        win.configure(bg=BG)
+        win.geometry("360x200")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        tk.Label(win, text="Export Format", font=FONT_BOLD, bg=BG, fg=ACCENT).pack(pady=(16, 8))
+        for text, val in [("TXT (Plain Text)", "txt"), ("HTML", "html"), ("PDF (requires weasyprint)", "pdf")]:
+            tk.Radiobutton(
+                win, text=text, variable=fmt, value=val,
+                font=FONT, bg=BG, fg=FG, selectcolor=BG_INPUT,
+                activebackground=BG, activeforeground=FG,
+            ).pack(anchor=tk.W, padx=40)
+
+        def _do_export():
+            win.destroy()
+            report = self._current_report
+            chosen = fmt.get()
+
+            def _run():
+                from lynx.export import ExportFormat, export_report
+                try:
+                    path = export_report(report, ExportFormat(chosen))
+                    self.root.after(0, lambda: messagebox.showinfo("Export Complete", f"Report exported to:\n{path}"))
+                except Exception as e:
+                    self.root.after(0, lambda: messagebox.showerror("Export Failed", str(e)))
+
+            thread = threading.Thread(target=_run, daemon=True)
+            thread.start()
+
+        tk.Button(
+            win, text="  Export  ", font=FONT_BTN,
+            bg=BTN_BG, fg=BTN_FG, activebackground=BTN_ACTIVE,
+            relief=tk.FLAT, padx=14, pady=4, cursor="hand2",
+            command=_do_export,
+        ).pack(pady=(12, 0))
+        win.bind("<Escape>", lambda _: win.destroy())
 
     def _on_about(self) -> None:
         from lynx import get_about_text
