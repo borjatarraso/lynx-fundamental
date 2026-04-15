@@ -37,6 +37,7 @@ MENU = """
   [bold]download-filing[/] <N>         Download filing #N
   [bold]news[/]                        Show recent news
   [bold]download-news[/] <N>           Download news article #N
+  [bold]open-news[/] <N>              Open news article #N in browser
   [bold]summary[/]                     Show moat + intrinsic value summary
   [bold]export[/]                      Show data export path
 
@@ -206,6 +207,29 @@ def run_interactive() -> None:
                         console.print(f"[green]Saved to:[/] {path}")
                     else:
                         console.print("[red]Download failed.[/]")
+                else:
+                    console.print(f"[red]Invalid index. Choose 1-{len(current_report.news)}[/]")
+            except (ValueError, TypeError):
+                console.print("[red]Provide a valid number.[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
+
+        elif cmd == "open-news":
+            if not current_report or not current_report.news:
+                console.print("[yellow]No news available.[/]")
+                continue
+            try:
+                idx = int(arg) - 1 if arg else IntPrompt.ask("Article number") - 1
+                if 0 <= idx < len(current_report.news):
+                    art = current_report.news[idx]
+                    if art.url:
+                        import webbrowser
+                        webbrowser.open(art.url)
+                        console.print(
+                            f"[green]Opened in browser:[/] {art.title[:60]}"
+                        )
+                    else:
+                        console.print("[red]No URL available for this article.[/]")
                 else:
                     console.print(f"[red]Invalid index. Choose 1-{len(current_report.news)}[/]")
             except (ValueError, TypeError):

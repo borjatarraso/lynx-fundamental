@@ -366,4 +366,23 @@ about = get_about_text()
 | Interactive | Type `about` at the prompt |
 | Textual UI | Press **F1** |
 | Graphical UI | Click **About** button in toolbar |
+
+### Filing Downloads
+
+| Mode | How to download |
+|------|-----------------|
+| Console (CLI) | Automatic during analysis (top N filings) |
+| Interactive | `download-filing <N>` |
+| Textual UI | Select filing row, press **Enter** |
+| Graphical UI | Click **Download** button on filing row |
+
+### News: Open in Browser
+
+| Mode | How to open |
+|------|-------------|
+| Interactive | `open-news <N>` |
+| Textual UI | Select news row, press **Enter** |
+| Graphical UI | Click **Open** button on news row |
+
+The TUI and GUI show a confirmation dialog after opening news in the browser. The dialog includes a "Do not show again" option that suppresses it for the rest of the session. The flag resets when the application is restarted.
 ```

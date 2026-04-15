@@ -275,6 +275,7 @@ class LynxFAGUI:
         self.cli_args = cli_args
         self._current_report: AnalysisReport | None = None
         self._sections: list[CollapsibleCard] = []
+        self._suppress_news_dialog: bool = False
 
         self.root = tk.Tk()
         self.root.title(f"{DIAMOND} Lynx Fundamental Analysis {DIAMOND}")
@@ -1068,10 +1069,10 @@ class LynxFAGUI:
         self._sections.append(card)
         frame = card.frame
 
-        cols = ["Type", "Filed", "Period", "Saved"]
+        cols = ["Type", "Filed", "Period", "Saved", ""]
         hdr = tk.Frame(frame, bg=BG_SURFACE)
         hdr.pack(fill=tk.X)
-        widths = [14, 18, 18, 10]
+        widths = [14, 18, 18, 10, 12]
         for col, w in zip(cols, widths):
             tk.Label(
                 hdr, text=col, font=FONT_SMALL_BOLD, bg=BG_SURFACE, fg=ACCENT,
@@ -1094,6 +1095,16 @@ class LynxFAGUI:
                     row, text=val, font=FONT_SMALL, bg=bg, fg=fg_color,
                     width=w, anchor=tk.CENTER, pady=3,
                 ).pack(side=tk.LEFT, padx=1)
+            # Download button
+            filing = f
+            btn = tk.Button(
+                row, text="Download", font=FONT_SMALL,
+                bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+                activebackground=BG_HOVER, activeforeground=FG,
+                relief=tk.FLAT, padx=4, pady=1, cursor="hand2",
+                command=lambda fl=filing: self._download_filing_gui(fl),
+            )
+            btn.pack(side=tk.LEFT, padx=4)
 
     # ---- News ------------------------------------------------------------
 
@@ -1123,10 +1134,71 @@ class LynxFAGUI:
                 row, text=title, font=FONT, bg=bg, fg=FG,
                 anchor=tk.W,
             ).pack(side=tk.LEFT, padx=(0, 8))
+
+            # Open in browser button
+            if n.url:
+                article = n
+                btn = tk.Button(
+                    row, text="Open", font=FONT_SMALL,
+                    bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+                    activebackground=BG_HOVER, activeforeground=FG,
+                    relief=tk.FLAT, padx=4, pady=1, cursor="hand2",
+                    command=lambda art=article: self._open_news_gui(art),
+                )
+                btn.pack(side=tk.RIGHT, padx=(4, 12))
+
             tk.Label(
                 row, text=meta, font=FONT_SMALL, bg=bg, fg=FG_SUBTLE,
                 anchor=tk.E,
-            ).pack(side=tk.RIGHT, padx=(0, 12))
+            ).pack(side=tk.RIGHT, padx=(0, 4))
+
+    # ---- Filing download / News open --------------------------------------
+
+    def _download_filing_gui(self, filing) -> None:
+        if not self._current_report:
+            return
+
+        def _do():
+            from lynx.core.reports import download_filing
+            try:
+                path = download_filing(self._current_report.profile.ticker, filing)
+                if path:
+                    self.root.after(0, lambda: messagebox.showinfo(
+                        "Download Complete",
+                        f"Filing {filing.form_type} ({filing.filing_date}) downloaded.\n\n"
+                        f"Saved to:\n{path}",
+                    ))
+                else:
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Download Failed",
+                        f"Could not download {filing.form_type} ({filing.filing_date}).",
+                    ))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Download Error", str(e),
+                ))
+
+        thread = threading.Thread(target=_do, daemon=True)
+        thread.start()
+
+    def _open_news_gui(self, article) -> None:
+        import webbrowser
+        if not article.url:
+            return
+        try:
+            webbrowser.open(article.url)
+        except Exception:
+            pass
+
+        if not self._suppress_news_dialog:
+            result = messagebox.askyesno(
+                "News Opened",
+                "News article has been opened in your default browser.\n\n"
+                "Click 'Yes' to continue showing this message,\n"
+                "or 'No' to suppress it for the rest of this session.",
+            )
+            if not result:
+                self._suppress_news_dialog = True
 
     # ---- Row helpers -----------------------------------------------------
 

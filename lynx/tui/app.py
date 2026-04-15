@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import webbrowser
+
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (
+    Button,
     DataTable,
     Footer,
     Header,
@@ -84,17 +87,68 @@ class SearchModal(ModalScreen[str]):
 
 
 # ======================================================================
+# News browser dialog
+# ======================================================================
+
+class NewsBrowserDialog(ModalScreen):
+    """Dialog shown after opening a news article in the browser."""
+    BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="news-dialog"):
+            yield Label(
+                "[bold]News article opened in your default browser.[/]",
+                id="news-dialog-label",
+            )
+            with Horizontal(id="news-dialog-buttons"):
+                yield Button("OK", id="news-ok-btn", variant="primary")
+                yield Button("Do not show again", id="news-suppress-btn", variant="default")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "news-suppress-btn":
+            self.dismiss("suppress")
+        else:
+            self.dismiss("ok")
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss("ok")
+
+
+# ======================================================================
+# Download result dialog
+# ======================================================================
+
+class DownloadResultDialog(ModalScreen):
+    """Dialog showing filing download result."""
+    BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
+
+    def __init__(self, message: str, success: bool = True, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._message = message
+        self._success = success
+
+    def compose(self) -> ComposeResult:
+        style = "bold green" if self._success else "bold red"
+        with Vertical(id="download-dialog"):
+            yield Label(
+                f"[{style}]{self._message}[/]",
+                id="download-dialog-label",
+            )
+            yield Button("OK", id="download-ok-btn", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss()
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss()
+
+
+# ======================================================================
 # Report view — uses compose() so Textual properly initialises widgets
 # ======================================================================
 
 class ReportView(Vertical):
-    """Widget that renders a full analysis report using TabbedContent.
-
-    Textual requires TabPane children to be yielded inside compose(),
-    not passed as constructor arguments, when the widget is mounted
-    dynamically.  This class holds the pre-built DataTables and yields
-    them in compose().
-    """
+    """Widget that renders a full analysis report using TabbedContent."""
 
     def __init__(self, report: AnalysisReport, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -131,8 +185,14 @@ class ReportView(Vertical):
                 yield _build_financials(r)
             with TabPane("Filings"):
                 yield _build_filings(r)
+                yield Static(
+                    "[dim]Select a row and press [bold]Enter[/bold] to download filing[/]",
+                )
             with TabPane("News"):
                 yield _build_news(r)
+                yield Static(
+                    "[dim]Select a row and press [bold]Enter[/bold] to open in browser[/]",
+                )
 
 
 # ======================================================================
@@ -193,6 +253,29 @@ class LynxApp(App):
         text-align: center;
         margin-top: 1;
     }
+    #news-dialog, #download-dialog {
+        width: 60;
+        height: auto;
+        max-height: 10;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+        margin: 6 10;
+    }
+    #news-dialog-label, #download-dialog-label {
+        text-align: center;
+        margin-bottom: 1;
+    }
+    #news-dialog-buttons {
+        align-horizontal: center;
+        height: auto;
+    }
+    #news-dialog-buttons Button {
+        margin: 0 1;
+    }
+    #download-ok-btn {
+        margin: 0 auto;
+    }
     """
 
     BINDINGS = [
@@ -201,10 +284,14 @@ class LynxApp(App):
         Binding("r", "refresh", "Refresh"),
         Binding("d", "dark", "Toggle Dark"),
         Binding("f1", "about", "About"),
+        Binding("tab", "focus_next", "Next Tab", show=True),
+        Binding("shift+tab", "focus_previous", "Prev Tab", show=True),
+        Binding("escape", "app.focus('status-area')", "Back", show=False),
     ]
 
     report: AnalysisReport | None = None
     _last_identifier: str = ""
+    _suppress_news_dialog: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -212,7 +299,10 @@ class LynxApp(App):
             "[bold blue]  LYNX FA  [/]\n\n"
             "[bold]Fundamental Analysis Tool[/]\n"
             "[dim]Press [bold]A[/bold] to analyze a stock, "
-            "[bold]Q[/bold] to quit[/]",
+            "[bold]Q[/bold] to quit[/]\n\n"
+            "[dim]Navigation: [bold]Tab[/bold]/[bold]Shift+Tab[/bold] switch tabs  "
+            "[bold]\u2190\u2191\u2192\u2193[/bold] arrow keys navigate  "
+            "[bold]Escape[/bold] go back[/]",
             id="status-area",
         )
         yield Footer()
@@ -299,6 +389,91 @@ class LynxApp(App):
                 f"[bold red]Display error:[/] {type(e).__name__}: {e}\n\n"
                 "[dim]Press A to try again[/]"
             )
+
+    # --- DataTable row selection handlers ---
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle Enter on a selected row in Filings or News tables."""
+        if not self.report:
+            return
+
+        # Determine which tab we're in by checking parent TabPane
+        table = event.data_table
+        tab_pane = table.ancestors_with_self
+        tab_label = ""
+        for ancestor in table.ancestors_with_self:
+            if isinstance(ancestor, TabPane):
+                tab_label = ancestor._label  # internal label text
+                break
+
+        row_idx = event.cursor_row
+
+        if "Filing" in str(tab_label):
+            self._download_filing(row_idx)
+        elif "News" in str(tab_label):
+            self._open_news(row_idx)
+
+    def _download_filing(self, row_idx: int) -> None:
+        if not self.report or not self.report.filings:
+            return
+        filings = self.report.filings[:20]
+        if row_idx < 0 or row_idx >= len(filings):
+            return
+        filing = filings[row_idx]
+        self._do_download_filing(filing)
+
+    @work(thread=True)
+    def _do_download_filing(self, filing) -> None:
+        from lynx.core.reports import download_filing
+        try:
+            path = download_filing(self.report.profile.ticker, filing)
+            if path:
+                self.call_from_thread(
+                    self.push_screen,
+                    DownloadResultDialog(
+                        f"Filing {filing.form_type} ({filing.filing_date}) downloaded.\n"
+                        f"Saved to: {path}",
+                        success=True,
+                    ),
+                )
+            else:
+                self.call_from_thread(
+                    self.push_screen,
+                    DownloadResultDialog(
+                        f"Failed to download {filing.form_type} ({filing.filing_date}).",
+                        success=False,
+                    ),
+                )
+        except Exception as e:
+            self.call_from_thread(
+                self.push_screen,
+                DownloadResultDialog(f"Download error: {e}", success=False),
+            )
+
+    def _open_news(self, row_idx: int) -> None:
+        if not self.report or not self.report.news:
+            return
+        articles = self.report.news[:20]
+        if row_idx < 0 or row_idx >= len(articles):
+            return
+        article = articles[row_idx]
+        if not article.url:
+            return
+
+        try:
+            webbrowser.open(article.url)
+        except Exception:
+            pass
+
+        if not self._suppress_news_dialog:
+            self.push_screen(
+                NewsBrowserDialog(),
+                self._on_news_dialog_result,
+            )
+
+    def _on_news_dialog_result(self, result: str) -> None:
+        if result == "suppress":
+            self._suppress_news_dialog = True
 
 
 # ======================================================================
@@ -403,10 +578,12 @@ def _build_moat(r: AnalysisReport) -> DataTable:
             _r2(t, "Intangible Assets", _s(m.intangible_assets))
         if m.cost_advantages:
             _r2(t, "Cost Advantages", _s(m.cost_advantages))
-    if m.roic_history:
-        _r2(t, "ROIC Trend", " -> ".join(_pctplain(x) for x in reversed(m.roic_history)))
-    if m.gross_margin_history:
-        _r2(t, "GM Trend", " -> ".join(_pctplain(x) for x in reversed(m.gross_margin_history)))
+    roic_vals = [r for r in m.roic_history if r is not None]
+    if roic_vals:
+        _r2(t, "ROIC Trend", " -> ".join(_pctplain(x) for x in reversed(roic_vals)))
+    gm_vals = [r for r in m.gross_margin_history if r is not None]
+    if gm_vals:
+        _r2(t, "GM Trend", " -> ".join(_pctplain(x) for x in reversed(gm_vals)))
     return t
 
 
@@ -441,15 +618,15 @@ def _build_financials(r: AnalysisReport) -> DataTable:
 
 
 def _build_filings(r: AnalysisReport) -> DataTable:
-    t = DataTable(zebra_stripes=True)
-    t.add_columns("Type", "Filed", "Period", "Saved")
-    for f in (r.filings or [])[:20]:
-        t.add_row(_s(f.form_type), _s(f.filing_date), _s(f.period), "Yes" if f.local_path else "No")
+    t = DataTable(zebra_stripes=True, cursor_type="row")
+    t.add_columns("#", "Type", "Filed", "Period", "Saved")
+    for i, f in enumerate((r.filings or [])[:20], 1):
+        t.add_row(str(i), _s(f.form_type), _s(f.filing_date), _s(f.period), "Yes" if f.local_path else "No")
     return t
 
 
 def _build_news(r: AnalysisReport) -> DataTable:
-    t = DataTable(zebra_stripes=True)
+    t = DataTable(zebra_stripes=True, cursor_type="row")
     t.add_columns("#", "Title", "Source", "Date")
     for i, n in enumerate((r.news or [])[:20], 1):
         raw = n.title or ""

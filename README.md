@@ -185,6 +185,7 @@ Launch with `lynx-fa -i`:
 | `download-filing <N>` | Download a filing |
 | `news` | Show news articles |
 | `download-news <N>` | Download an article |
+| `open-news <N>` | Open article in browser |
 | `summary` | Show moat + intrinsic value |
 | `cache` | List cached tickers |
 | `drop-cache <TICKER>` | Remove cached data |
@@ -229,10 +230,17 @@ Direct CLI analysis: `lynx-fa -p AAPL`
 REPL with commands: analyze, search, filings, news, summary, about, etc.
 
 ### Textual UI (`-tui`)
-Full terminal UI with tabs, search modal, and keyboard navigation. Press **F1** for About.
+Full terminal UI with tabs, search modal, and keyboard navigation.
+- **Tab** / **Shift+Tab** to switch between metric tabs
+- **Arrow keys** to navigate within tables
+- **Enter** on a filing row to download it; **Enter** on a news row to open in browser
+- **F1** for About, **A** to analyze, **R** to refresh, **D** to toggle dark mode
 
 ### Graphical Interface (`-x`)
 Tkinter-based GUI with collapsible sections, moat score bar, and About dialog.
+- **Download** buttons on each filing row
+- **Open** buttons on each news article to open in default browser
+- Dismissable browser notification (per-session suppression)
 
 ## About
 
