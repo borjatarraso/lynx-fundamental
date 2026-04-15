@@ -58,6 +58,68 @@ class AboutModal(ModalScreen):
 
 
 # ======================================================================
+# Explain modal
+# ======================================================================
+
+class ExplainModal(ModalScreen):
+    BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
+
+    def __init__(self, metric_key: str, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._key = metric_key
+
+    def compose(self) -> ComposeResult:
+        from lynx.metrics.explanations import get_explanation
+        exp = get_explanation(self._key)
+        if exp:
+            content = (
+                f"[bold]{exp.full_name}[/]\n\n"
+                f"{exp.description}\n\n"
+                f"[bold cyan]Why it matters:[/]\n{exp.why_used}\n\n"
+                f"[bold cyan]Formula:[/]\n[bold]{exp.formula}[/]\n\n"
+                f"[dim]Category: {exp.category}[/]"
+            )
+        else:
+            content = f"No explanation available for '{self._key}'."
+        with Vertical(id="explain-dialog"):
+            yield Label(f"[bold]Metric: {self._key}[/]", id="explain-title")
+            yield Static(content, id="explain-content")
+            yield Label("[dim]Press Escape to close[/]", id="explain-hint")
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss()
+
+
+# ======================================================================
+# Metric list modal (for browsing explanations)
+# ======================================================================
+
+class MetricListModal(ModalScreen[str]):
+    BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
+
+    def compose(self) -> ComposeResult:
+        from lynx.metrics.explanations import list_metrics
+        with Vertical(id="metric-list-dialog"):
+            yield Label("[bold]Select a metric to explain[/]", id="metric-list-title")
+            t = DataTable(zebra_stripes=True, cursor_type="row", id="metric-list-table")
+            t.add_columns("Key", "Name", "Category")
+            for m in list_metrics():
+                t.add_row(m.key, m.full_name, m.category)
+            yield t
+            yield Label("[dim]Press Enter to explain, Escape to close[/]", id="metric-list-hint")
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        from lynx.metrics.explanations import list_metrics
+        metrics = list_metrics()
+        idx = event.cursor_row
+        if 0 <= idx < len(metrics):
+            self.dismiss(metrics[idx].key)
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss("")
+
+
+# ======================================================================
 # Search modal
 # ======================================================================
 
@@ -276,6 +338,44 @@ class LynxApp(App):
     #download-ok-btn {
         margin: 0 auto;
     }
+    #explain-dialog {
+        width: 80;
+        height: auto;
+        max-height: 35;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+        margin: 2 4;
+    }
+    #explain-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    #explain-content {
+        margin: 0 2;
+    }
+    #explain-hint {
+        text-align: center;
+        margin-top: 1;
+    }
+    #metric-list-dialog {
+        width: 90;
+        height: 35;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+        margin: 2 4;
+    }
+    #metric-list-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    #metric-list-hint {
+        text-align: center;
+        margin-top: 1;
+    }
     """
 
     BINDINGS = [
@@ -284,6 +384,7 @@ class LynxApp(App):
         Binding("r", "refresh", "Refresh"),
         Binding("d", "dark", "Toggle Dark"),
         Binding("f1", "about", "About"),
+        Binding("e", "explain", "Explain Metric"),
         Binding("tab", "focus_next", "Next Tab", show=True),
         Binding("shift+tab", "focus_previous", "Prev Tab", show=True),
         Binding("escape", "app.focus('status-area')", "Back", show=False),
@@ -309,6 +410,13 @@ class LynxApp(App):
 
     def action_about(self) -> None:
         self.push_screen(AboutModal())
+
+    def action_explain(self) -> None:
+        self.push_screen(MetricListModal(), self._on_explain_result)
+
+    def _on_explain_result(self, key: str) -> None:
+        if key:
+            self.push_screen(ExplainModal(key))
 
     def action_analyze(self) -> None:
         self.push_screen(SearchModal(), self._on_search_result)

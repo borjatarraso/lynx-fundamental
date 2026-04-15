@@ -46,6 +46,10 @@ MENU = """
   [bold]drop-cache[/] <TICKER>         Remove cached data for a ticker
   [bold]drop-cache all[/]              Remove all cached data
 
+[bold cyan]Learn:[/]
+  [bold]explain[/] <metric>            Explain a metric (e.g. explain pe_trailing)
+  [bold]explain-all[/]                 List all metric explanations
+
 [bold cyan]Other:[/]
   [bold]about[/]                       Show about, author, and license
   [bold]help[/]                        Show this menu
@@ -101,6 +105,37 @@ def run_interactive() -> None:
 
         elif cmd == "help":
             console.print(MENU)
+
+        elif cmd == "explain":
+            from lynx.metrics.explanations import get_explanation, list_metrics
+            if not arg:
+                console.print("[yellow]Usage: explain <metric_key>  (e.g. explain pe_trailing)[/]")
+                console.print("[dim]Use 'explain-all' to see all available metrics.[/]")
+                continue
+            exp = get_explanation(arg.lower().replace("-", "_").replace(" ", "_"))
+            if exp:
+                console.print(Panel(
+                    f"[bold]{exp.full_name}[/]\n\n"
+                    f"{exp.description}\n\n"
+                    f"[bold cyan]Why it matters:[/]\n{exp.why_used}\n\n"
+                    f"[bold cyan]Formula:[/]\n[bold]{exp.formula}[/]\n\n"
+                    f"[dim]Category: {exp.category}[/]",
+                    title=f"[bold]{exp.key}[/]",
+                    border_style="cyan",
+                ))
+            else:
+                console.print(f"[red]Unknown metric '{arg}'.[/] Use 'explain-all' to see available metrics.")
+
+        elif cmd == "explain-all":
+            from lynx.metrics.explanations import list_metrics
+            t = Table(title="Available Metrics", border_style="cyan")
+            t.add_column("Key", style="bold cyan", min_width=22)
+            t.add_column("Name", min_width=35)
+            t.add_column("Category")
+            for m in list_metrics():
+                t.add_row(m.key, m.full_name, m.category)
+            console.print(t)
+            console.print("[dim]Use 'explain <key>' for detailed explanation.[/]")
 
         elif cmd == "about":
             _show_about()

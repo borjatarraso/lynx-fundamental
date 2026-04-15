@@ -144,6 +144,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show about information, author, and license",
     )
+    parser.add_argument(
+        "--explain",
+        metavar="METRIC",
+        nargs="?",
+        const="__list__",
+        help="Explain a metric (e.g. --explain pe_trailing). Use without argument to list all.",
+    )
 
     return parser
 
@@ -152,10 +159,17 @@ def run_cli() -> None:
     """Parse arguments and dispatch to the appropriate mode."""
     parser = build_parser()
 
-    # Allow --about and --version without requiring -p/-t
+    # Allow --about, --explain, and --version without requiring -p/-t
     if "--about" in sys.argv:
         from rich.console import Console
         _cmd_about(Console(stderr=True))
+        return
+
+    if "--explain" in sys.argv:
+        from rich.console import Console
+        idx = sys.argv.index("--explain")
+        metric = sys.argv[idx + 1] if idx + 1 < len(sys.argv) and not sys.argv[idx + 1].startswith("-") else None
+        _cmd_explain(Console(stderr=True), metric)
         return
 
     args = parser.parse_args()
@@ -293,6 +307,39 @@ def _cmd_list_cache(con) -> None:
 
     con.print(t)
     con.print(f"[dim]Total: {len(tickers)} tickers cached[/]")
+
+
+def _cmd_explain(con, metric: str | None) -> None:
+    from rich.panel import Panel
+    from rich.table import Table
+    from lynx.metrics.explanations import get_explanation, list_metrics
+
+    if metric is None or metric == "__list__":
+        t = Table(title="Available Metrics", border_style="cyan")
+        t.add_column("Key", style="bold cyan", min_width=22)
+        t.add_column("Name", min_width=35)
+        t.add_column("Category")
+        for m in list_metrics():
+            t.add_row(m.key, m.full_name, m.category)
+        con.print(t)
+        con.print("[dim]Use --explain <key> for detailed explanation.[/]")
+        return
+
+    key = metric.lower().replace("-", "_").replace(" ", "_")
+    exp = get_explanation(key)
+    if not exp:
+        con.print(f"[red]Unknown metric '{metric}'.[/] Use --explain to list all metrics.")
+        return
+
+    con.print(Panel(
+        f"[bold]{exp.full_name}[/]\n\n"
+        f"{exp.description}\n\n"
+        f"[bold cyan]Why it matters:[/]\n{exp.why_used}\n\n"
+        f"[bold cyan]Formula:[/]\n[bold]{exp.formula}[/]\n\n"
+        f"[dim]Category: {exp.category}[/]",
+        title=f"[bold]{exp.key}[/]",
+        border_style="cyan",
+    ))
 
 
 def _cmd_about(con) -> None:

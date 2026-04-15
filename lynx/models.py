@@ -225,6 +225,17 @@ class FinancialStatement:
 
 
 @dataclass
+class MetricExplanation:
+    """Explanation of a financial metric."""
+    key: str
+    full_name: str
+    description: str
+    why_used: str
+    formula: str
+    category: str  # valuation, profitability, solvency, growth, efficiency
+
+
+@dataclass
 class Filing:
     """SEC or regulatory filing metadata."""
     form_type: str
