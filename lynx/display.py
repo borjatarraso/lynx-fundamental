@@ -254,9 +254,9 @@ def _display_solvency(report: AnalysisReport) -> None:
     _add_metric_row(t, "NCAV Per Share", f"${s.ncav_per_share:.4f}" if s.ncav_per_share is not None else "[dim]N/A[/]", _assess_ncav_vs_price(s.ncav_per_share, report), rel("ncav_per_share"))
 
     # Always show absolute numbers
-    t.add_row("  Total Debt", fmt_money(s.total_debt), "")
-    t.add_row("  Total Cash", fmt_money(s.total_cash), "")
-    t.add_row("  Net Debt", fmt_money(s.net_debt), "")
+    _add_metric_row(t, "Total Debt", fmt_money(s.total_debt), "", Relevance.RELEVANT)
+    _add_metric_row(t, "Total Cash", fmt_money(s.total_cash), "", Relevance.RELEVANT)
+    _add_metric_row(t, "Net Debt", fmt_money(s.net_debt), "", Relevance.RELEVANT)
 
     console.print(t)
 
@@ -267,7 +267,7 @@ def _display_growth(report: AnalysisReport) -> None:
     rel = lambda key: get_relevance(key, tier, "growth")
 
     t = Table(title="Growth Metrics", show_lines=True, border_style="magenta")
-    t.add_column("Metric", style="bold", min_width=27)
+    t.add_column("Metric", style="bold", min_width=22)
     t.add_column("Value", justify="right", min_width=15)
     t.add_column("Assessment", min_width=28)
 
@@ -325,12 +325,14 @@ def _display_moat(report: AnalysisReport) -> None:
         if m.cost_advantages:
             t.add_row("Cost Advantages", m.cost_advantages)
 
-    # Trends
-    if m.roic_history:
-        hist = " -> ".join(fmt_pct(r) for r in reversed(m.roic_history))
+    # Trends (filter out None values for clean display)
+    roic_vals = [r for r in m.roic_history if r is not None]
+    if roic_vals:
+        hist = " -> ".join(fmt_pct(r) for r in reversed(roic_vals))
         t.add_row("ROIC Trend", hist)
-    if m.gross_margin_history:
-        hist = " -> ".join(fmt_pct(r) for r in reversed(m.gross_margin_history))
+    gm_vals = [r for r in m.gross_margin_history if r is not None]
+    if gm_vals:
+        hist = " -> ".join(fmt_pct(r) for r in reversed(gm_vals))
         t.add_row("Gross Margin Trend", hist)
 
     console.print(t)
@@ -440,7 +442,8 @@ def _display_news(report: AnalysisReport) -> None:
     t.add_column("Source")
     t.add_column("Date")
     for i, n in enumerate(report.news[:15], 1):
-        title = n.title[:80] + ("..." if len(n.title) > 80 else "")
+        raw_title = n.title or ""
+        title = raw_title[:80] + ("..." if len(raw_title) > 80 else "")
         t.add_row(str(i), title, n.source or "", n.published or "")
     console.print(t)
 

@@ -647,9 +647,11 @@ def calc_intrinsic_value(
 
     # --- Peter Lynch Fair Value (for companies with positive earnings growth) ---
     if eps and eps > 0 and growth.earnings_cagr_3y and growth.earnings_cagr_3y > 0:
-        eg = growth.earnings_cagr_3y * 100
+        eg = min(growth.earnings_cagr_3y * 100, 100)  # Cap at 100% growth
         if eg > 0:
-            iv.lynch_fair_value = round(eps * eg, 2)
+            result = eps * eg
+            if not math.isnan(result) and not math.isinf(result):
+                iv.lynch_fair_value = round(result, 2)
 
     # --- NCAV / Net-Net value (critical for micro/nano) ---
     if solvency.ncav_per_share is not None:

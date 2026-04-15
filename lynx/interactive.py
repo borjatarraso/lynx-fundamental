@@ -250,8 +250,16 @@ def run_interactive() -> None:
                 force = is_testing()
                 current_report = run_full_analysis(identifier=raw, refresh=force)
                 display_full_report(current_report)
-            except Exception:
-                console.print("[red]Unknown command. Type 'help' for available commands.[/]")
+            except ValueError as e:
+                console.print(f"[red]Could not resolve '{raw}':[/] {e}")
+                console.print("[dim]Type 'help' for available commands.[/]")
+            except (ConnectionError, TimeoutError, OSError) as e:
+                console.print(f"[bold red]Network error:[/] {e}")
+            except KeyboardInterrupt:
+                console.print("[dim]Cancelled.[/]")
+            except Exception as e:
+                console.print(f"[red]Error:[/] {type(e).__name__}: {e}")
+                console.print("[dim]Type 'help' for available commands.[/]")
 
 
 def _show_cache() -> None:

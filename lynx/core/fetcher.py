@@ -124,9 +124,9 @@ def fetch_financial_statements(ticker: str) -> list[FinancialStatement]:
                     balance, col, "Current Liabilities",
                 )
                 stmt.shares_outstanding = _get(balance, col, "Ordinary Shares Number", "Share Issued")
-                equity = stmt.total_equity or 0
+                equity = stmt.total_equity
                 shares = stmt.shares_outstanding
-                if equity and shares and shares > 0:
+                if equity is not None and shares and shares > 0:
                     stmt.book_value_per_share = equity / shares
 
             # Merge cash flow

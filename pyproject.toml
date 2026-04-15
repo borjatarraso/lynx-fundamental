@@ -22,6 +22,10 @@ lynx-fa = "lynx.__main__:main"
 [tool.setuptools.packages.find]
 include = ["lynx*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
