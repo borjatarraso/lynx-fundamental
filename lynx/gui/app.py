@@ -605,6 +605,11 @@ class LynxFAGUI:
         ).pack(pady=(24, 4))
 
         tk.Label(
+            win, text=about['suite'],
+            font=FONT_SMALL, bg=BG, fg=ACCENT_DIM,
+        ).pack(pady=(0, 4))
+
+        tk.Label(
             win, text=f"Version {about['version']} ({about['year']})",
             font=FONT_SMALL, bg=BG, fg=FG_DIM,
         ).pack(pady=(0, 16))

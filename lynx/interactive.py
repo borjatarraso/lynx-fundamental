@@ -376,6 +376,7 @@ def _show_about() -> None:
     console.print()
     console.print(Panel(
         f"[bold blue]{about['name']}[/]\n"
+        f"[dim]{about['suite']}[/]\n"
         f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
         f"[bold]Developed by:[/] {about['author']}\n"
         f"[bold]Contact:[/]      {about['email']}\n"

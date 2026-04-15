@@ -202,7 +202,7 @@ Launch with `lynx-fa -i`:
 ## Project Structure
 
 ```
-lynx-fa-analysis/
+lynx-fa/
 ├── pyproject.toml
 ├── lynx/
 │   ├── __main__.py          # Entry point

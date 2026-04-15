@@ -372,6 +372,7 @@ def _cmd_about(con) -> None:
     con.print()
     con.print(Panel(
         f"[bold blue]{about['name']}[/]\n"
+        f"[dim]{about['suite']}[/]\n"
         f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
         f"[bold]Developed by:[/] {about['author']}\n"
         f"[bold]Contact:[/]      {about['email']}\n"

@@ -40,8 +40,12 @@ class TestGetAboutText:
 
     def test_required_keys(self):
         about = get_about_text()
-        required_keys = {"name", "version", "author", "email", "year", "license", "license_text", "description"}
+        required_keys = {"name", "suite", "version", "author", "email", "year", "license", "license_text", "description"}
         assert required_keys.issubset(about.keys())
+
+    def test_suite_name(self):
+        about = get_about_text()
+        assert about["suite"] == "Lince Investor Suite"
 
     def test_values_match_module_attrs(self):
         about = get_about_text()

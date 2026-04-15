@@ -41,7 +41,8 @@ POSSIBILITY OF SUCH DAMAGE."""
 def get_about_text() -> dict:
     """Return structured about information."""
     return {
-        "name": "Lynx Fundamental Analysis",
+        "name": "Lynx FA — Fundamental Analysis",
+        "suite": "Lince Investor Suite",
         "version": __version__,
         "author": __author__,
         "email": __author_email__,
@@ -51,6 +52,7 @@ def get_about_text() -> dict:
         "description": (
             "Value investing research tool with moat analysis. "
             "Fetches, calculates, and displays 40+ financial metrics, "
-            "SEC filings, and news for any publicly traded company."
+            "SEC filings, and news for any publicly traded company.\n\n"
+            "Part of the Lince Investor Suite."
         ),
     }

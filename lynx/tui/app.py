@@ -40,6 +40,7 @@ class AboutModal(ModalScreen):
                 id="about-title",
             )
             yield Static(
+                f"{about['suite']}\n"
                 f"Version {about['version']} ({about['year']})\n\n"
                 f"[bold]Developed by:[/] {about['author']}\n"
                 f"[bold]Contact:[/]      {about['email']}\n"
