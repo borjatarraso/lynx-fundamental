@@ -83,7 +83,8 @@ lynx-fa -p GOOG --no-reports --no-news
 usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
                [--drop-cache [TICKER]] [--list-cache] [--no-reports]
                [--no-news] [--max-filings N] [--verbose] [--version]
-               [--about] [identifier]
+               [--about] [--explain [METRIC]] [--export FORMAT]
+               [--output PATH] [identifier]
 ```
 
 | Flag | Description |
@@ -103,6 +104,9 @@ usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
 | `--max-filings N` | Limit filing downloads (default: 10) |
 | `-v`, `--verbose` | Verbose output |
 | `--about` | Show about information, author, and license |
+| `--explain [METRIC]` | Explain a metric (or list all if no argument) |
+| `--export FORMAT` | Export report to file (txt, html, pdf) |
+| `--output PATH` | Output path for export (default: auto) |
 
 ## Company Tier System
 
@@ -189,7 +193,10 @@ Launch with `lynx-fa -i`:
 | `summary` | Show moat + intrinsic value |
 | `cache` | List cached tickers |
 | `drop-cache <TICKER>` | Remove cached data |
-| `export` | Show data directory path |
+| `export <txt\|html\|pdf>` | Export report to file |
+| `explain <metric>` | Explain a metric (full name, formula, why it matters) |
+| `explain-all` | List all metric explanations |
+| `open-news <N>` | Open article in browser |
 | `about` | Show about, author, and license |
 
 ## Project Structure
@@ -212,7 +219,13 @@ lynx-fa-analysis/
 │   │   └── ticker.py        # ISIN/ticker/name resolution
 │   ├── metrics/
 │   │   ├── calculator.py    # All metric calculations (tier-aware)
+│   │   ├── explanations.py  # 35+ metric explanations (full name, formula, why)
 │   │   └── relevance.py     # Metric relevance per company tier
+│   ├── export/
+│   │   ├── __init__.py      # Export dispatcher (TXT/HTML/PDF)
+│   │   ├── txt_export.py    # Plaintext via Rich console capture
+│   │   ├── html_export.py   # Standalone HTML with dark theme
+│   │   └── pdf_export.py    # PDF via weasyprint (optional)
 │   ├── tui/
 │   │   └── app.py           # Textual terminal UI
 │   └── gui/
@@ -235,12 +248,44 @@ Full terminal UI with tabs, search modal, and keyboard navigation.
 - **Arrow keys** to navigate within tables
 - **Enter** on a filing row to download it; **Enter** on a news row to open in browser
 - **F1** for About, **A** to analyze, **R** to refresh, **D** to toggle dark mode
+- **E** to browse and explain metrics, **X** to export report
 
 ### Graphical Interface (`-x`)
 Tkinter-based GUI with collapsible sections, moat score bar, and About dialog.
 - **Download** buttons on each filing row
 - **Open** buttons on each news article to open in default browser
 - Dismissable browser notification (per-session suppression)
+- **Export** button for TXT/HTML/PDF report generation
+
+## Assessment Conclusion
+
+Every analysis includes a synthesized conclusion with:
+- **Overall score** (0-100) based on tier-weighted category scoring
+- **Verdict**: Strong Buy / Buy / Hold / Caution / Avoid
+- **Category scores**: valuation, profitability, solvency, growth, moat
+- **Key strengths** and **risks** (top 5 each)
+- **Tier-specific methodology note**
+
+Category weights shift by tier: micro/nano caps weight solvency at 35-40%, while mega caps balance evenly across all categories.
+
+## Metric Explanations
+
+Use `lynx-fa --explain pe_trailing` to see the full name, description, why the metric matters for value investing, and the calculation formula. Use `lynx-fa --explain` to list all 35+ metrics.
+
+Available in all modes: `explain` command (interactive), **E** key (TUI), `--explain` flag (CLI).
+
+## Export Reports
+
+Export full analyses to TXT, HTML, or PDF:
+
+```bash
+lynx-fa -p AAPL --export html                   # Auto-named in data dir
+lynx-fa -p AAPL --export pdf --output report.pdf # Custom path
+```
+
+Available in all modes: `export txt` (interactive), **X** key (TUI), **Export** button (GUI).
+
+PDF export requires `weasyprint`: `pip install weasyprint`
 
 ## About
 

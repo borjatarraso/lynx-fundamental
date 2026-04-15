@@ -1,0 +1,896 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.3.2 (Python 3.14.3 on linux)" generated="2026-04-15T09:40:13.263028" rpa="false" schemaversion="5">
+<suite id="s1" name="Cli Tests &amp; Api Tests">
+<suite id="s1-s1" name="Cli Tests" source="/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/cli_tests.robot">
+<kw name="Set Testing Mode" type="SETUP">
+<kw name="Set Environment Variable" owner="OperatingSystem">
+<arg>PYTHONDONTWRITEBYTECODE</arg>
+<arg>1</arg>
+<doc>Sets an environment variable to a specified value.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.314097" elapsed="0.000241"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:13.313469" elapsed="0.001000"/>
+</kw>
+<test id="s1-s1-t1" name="Version Flag Shows Version" line="31">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.315462" elapsed="0.203301"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.519411" elapsed="0.003224"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.523117" elapsed="0.002818"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:13.526220" elapsed="0.000192"/>
+</return>
+<var>${result}</var>
+<arg>--version</arg>
+<status status="PASS" start="2026-04-15T09:40:13.315097" elapsed="0.211942"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.528684" elapsed="0.000703"/>
+</kw>
+<arg>lynx-fa</arg>
+<status status="PASS" start="2026-04-15T09:40:13.527661" elapsed="0.001979"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.531158" elapsed="0.000660"/>
+</kw>
+<arg>0.2.0</arg>
+<status status="PASS" start="2026-04-15T09:40:13.530112" elapsed="0.001962"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.532471" elapsed="0.001882"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:13.314556" elapsed="0.220286"/>
+</test>
+<test id="s1-s1-t2" name="About Flag Shows Author" line="37">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.538264" elapsed="0.304491"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.843337" elapsed="0.003090"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.846905" elapsed="0.002773"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:13.849910" elapsed="0.000166"/>
+</return>
+<var>${result}</var>
+<arg>--about</arg>
+<status status="PASS" start="2026-04-15T09:40:13.537180" elapsed="0.313514"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.852275" elapsed="0.000633"/>
+</kw>
+<arg>Borja Tarraso</arg>
+<status status="PASS" start="2026-04-15T09:40:13.851268" elapsed="0.001929"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.854676" elapsed="0.000655"/>
+</kw>
+<arg>BSD-3-Clause</arg>
+<status status="PASS" start="2026-04-15T09:40:13.853661" elapsed="0.001927"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.856987" elapsed="0.000639"/>
+</kw>
+<arg>borja.tarraso@member.fsf.org</arg>
+<status status="PASS" start="2026-04-15T09:40:13.856036" elapsed="0.001835"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.858256" elapsed="0.001838"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:13.535653" elapsed="0.324948"/>
+</test>
+<test id="s1-s1-t3" name="Explain Lists All Metrics" line="44">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:13.863515" elapsed="0.303864"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.167681" elapsed="0.001491"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.169395" elapsed="0.001282"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:14.170785" elapsed="0.000066"/>
+</return>
+<var>${result}</var>
+<arg>--explain</arg>
+<status status="PASS" start="2026-04-15T09:40:13.862566" elapsed="0.308553"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.171847" elapsed="0.000324"/>
+</kw>
+<arg>pe_trailing</arg>
+<status status="PASS" start="2026-04-15T09:40:14.171392" elapsed="0.000903"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.173077" elapsed="0.000398"/>
+</kw>
+<arg>roic</arg>
+<status status="PASS" start="2026-04-15T09:40:14.172517" elapsed="0.001106"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.174452" elapsed="0.000375"/>
+</kw>
+<arg>debt_to_equity</arg>
+<status status="PASS" start="2026-04-15T09:40:14.173889" elapsed="0.001083"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.175246" elapsed="0.001077"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:13.861316" elapsed="0.315270"/>
+</test>
+<test id="s1-s1-t4" name="Explain Specific Metric" line="51">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.178272" elapsed="0.303771"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.482675" elapsed="0.003016"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.486180" elapsed="0.002680"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:14.489094" elapsed="0.000165"/>
+</return>
+<var>${result}</var>
+<arg>--explain</arg>
+<arg>pe_trailing</arg>
+<status status="PASS" start="2026-04-15T09:40:14.177696" elapsed="0.312138"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.491465" elapsed="0.000701"/>
+</kw>
+<arg>Price-to-Earnings</arg>
+<status status="PASS" start="2026-04-15T09:40:14.490436" elapsed="0.001989"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.493871" elapsed="0.000651"/>
+</kw>
+<arg>Formula</arg>
+<status status="PASS" start="2026-04-15T09:40:14.492896" elapsed="0.001875"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.495119" elapsed="0.001871"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:14.176955" elapsed="0.320504"/>
+</test>
+<test id="s1-s1-t5" name="Explain Unknown Metric Shows Error" line="57">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.500381" elapsed="0.304302"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.804988" elapsed="0.001553"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.806771" elapsed="0.001254"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:14.808149" elapsed="0.000070"/>
+</return>
+<var>${result}</var>
+<arg>--explain</arg>
+<arg>nonexistent_metric</arg>
+<status status="PASS" start="2026-04-15T09:40:14.499409" elapsed="0.309080"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.809274" elapsed="0.000303"/>
+</kw>
+<arg>Unknown metric</arg>
+<status status="PASS" start="2026-04-15T09:40:14.808746" elapsed="0.000951"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.809874" elapsed="0.000862"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:14.498069" elapsed="0.312875"/>
+</test>
+<test id="s1-s1-t6" name="Mode Required Without Special Flags" line="62">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:14.812384" elapsed="0.202712"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.015416" elapsed="0.001331"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.016962" elapsed="0.001294"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:15.018358" elapsed="0.000064"/>
+</return>
+<var>${result}</var>
+<arg>AAPL</arg>
+<status status="PASS" start="2026-04-15T09:40:14.811883" elapsed="0.206798"/>
+</kw>
+<kw name="Should Not Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are equal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.018869" elapsed="0.000818"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:14.811263" elapsed="0.208616"/>
+</test>
+<test id="s1-s1-t7" name="Invalid Max Filings Rejected" line="66">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.021262" elapsed="0.202853"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.224708" elapsed="0.002874"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.228033" elapsed="0.002769"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:15.231027" elapsed="0.000160"/>
+</return>
+<var>${result}</var>
+<arg>-p</arg>
+<arg>--max-filings</arg>
+<arg>-1</arg>
+<arg>AAPL</arg>
+<status status="PASS" start="2026-04-15T09:40:15.020768" elapsed="0.211061"/>
+</kw>
+<kw name="Should Not Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are equal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.232283" elapsed="0.001814"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:15.020195" elapsed="0.214353"/>
+</test>
+<test id="s1-s1-t8" name="Zero Max Filings Rejected" line="70">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.237420" elapsed="0.203604"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.441353" elapsed="0.001266"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.442819" elapsed="0.001112"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:15.444027" elapsed="0.000059"/>
+</return>
+<var>${result}</var>
+<arg>-p</arg>
+<arg>--max-filings</arg>
+<arg>0</arg>
+<arg>AAPL</arg>
+<status status="PASS" start="2026-04-15T09:40:15.236436" elapsed="0.207901"/>
+</kw>
+<kw name="Should Not Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are equal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.444511" elapsed="0.000774"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:15.235179" elapsed="0.210297"/>
+</test>
+<test id="s1-s1-t9" name="List Cache Testing Mode" line="74">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.446747" elapsed="0.202647"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.649689" elapsed="0.001460"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.651370" elapsed="0.001254"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:15.652731" elapsed="0.000064"/>
+</return>
+<var>${result}</var>
+<arg>-t</arg>
+<arg>--list-cache</arg>
+<status status="PASS" start="2026-04-15T09:40:15.446321" elapsed="0.206740"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.653267" elapsed="0.000821"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:15.445747" elapsed="0.208558"/>
+</test>
+<test id="s1-s1-t10" name="Help Flag Works" line="78">
+<kw name="Run Lynx">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-m</arg>
+<arg>lynx</arg>
+<arg>@{args}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=60s</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.655666" elapsed="0.202364"/>
+</kw>
+<kw name="Set Variable" owner="BuiltIn">
+<var>${combined}</var>
+<arg>${result.stdout}\n${result.stderr}</arg>
+<doc>Returns the given values which can then be assigned to a variables.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.858406" elapsed="0.001494"/>
+</kw>
+<kw name="Set Test Variable" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${combined}</arg>
+<doc>Makes a variable available everywhere within the scope of the current test.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.860116" elapsed="0.001286"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:15.861519" elapsed="0.000066"/>
+</return>
+<var>${result}</var>
+<arg>--help</arg>
+<status status="PASS" start="2026-04-15T09:40:15.655225" elapsed="0.206625"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.862661" elapsed="0.000300"/>
+</kw>
+<arg>production-mode</arg>
+<status status="PASS" start="2026-04-15T09:40:15.862101" elapsed="0.000979"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.863765" elapsed="0.000297"/>
+</kw>
+<arg>testing-mode</arg>
+<status status="PASS" start="2026-04-15T09:40:15.863312" elapsed="0.001065"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.865026" elapsed="0.000309"/>
+</kw>
+<arg>--export</arg>
+<status status="PASS" start="2026-04-15T09:40:15.864591" elapsed="0.000864"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.866094" elapsed="0.000331"/>
+</kw>
+<arg>--explain</arg>
+<status status="PASS" start="2026-04-15T09:40:15.865663" elapsed="0.000879"/>
+</kw>
+<kw name="Output Should Contain">
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${OUTPUT}</arg>
+<arg>${text}</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.867339" elapsed="0.000367"/>
+</kw>
+<arg>--about</arg>
+<status status="PASS" start="2026-04-15T09:40:15.866752" elapsed="0.001101"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.868052" elapsed="0.001124"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:15.654601" elapsed="0.214832"/>
+</test>
+<doc>CLI acceptance tests for Lynx Fundamental Analysis</doc>
+<status status="PASS" start="2026-04-15T09:40:13.299017" elapsed="2.571240"/>
+</suite>
+<suite id="s1-s2" name="Api Tests" source="/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/api_tests.robot">
+<test id="s1-s2-t1" name="About API Returns Dict" line="19">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:15.875756" elapsed="0.203049"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:16.078999" elapsed="0.000094"/>
+</return>
+<var>${result}</var>
+<arg>from lynx import get_about_text; a=get_about_text(); assert 'author' in a; assert 'license' in a; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:15.875164" elapsed="0.204342"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.079766" elapsed="0.001023"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.081033" elapsed="0.001197"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:15.874375" elapsed="0.208116"/>
+</test>
+<test id="s1-s2-t2" name="Tier Classification Works" line="25">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.084216" elapsed="0.203395"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:16.287927" elapsed="0.000155"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.models import classify_tier, CompanyTier; assert classify_tier(500e9)==CompanyTier.MEGA; assert classify_tier(None)==CompanyTier.NANO; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:16.083635" elapsed="0.205126"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.289216" elapsed="0.001649"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.291348" elapsed="0.001742"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:16.082856" elapsed="0.210695"/>
+</test>
+<test id="s1-s2-t3" name="Explanations API Works" line="31">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.296383" elapsed="0.204034"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:16.500603" elapsed="0.000084"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.metrics.explanations import get_explanation, list_metrics; assert get_explanation('pe_trailing'); assert len(list_metrics())&gt;30; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:16.295426" elapsed="0.205602"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.501297" elapsed="0.000950"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.502470" elapsed="0.000972"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:16.294200" elapsed="0.209483"/>
+</test>
+<test id="s1-s2-t4" name="Conclusion API Works" line="37">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.505301" elapsed="0.203045"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:16.708505" elapsed="0.000073"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.core.conclusion import generate_conclusion; from lynx.models import *; r=AnalysisReport(profile=CompanyProfile(ticker='T',name='T'),valuation=ValuationMetrics(),profitability=ProfitabilityMetrics(),solvency=SolvencyMetrics(),growth=GrowthMetrics(),efficiency=EfficiencyMetrics(),moat=MoatIndicators(),intrinsic_value=IntrinsicValue()); c=generate_conclusion(r); assert c.verdict; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:16.504752" elapsed="0.204127"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.709093" elapsed="0.000764"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.710037" elapsed="0.000807"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:16.504021" elapsed="0.207020"/>
+</test>
+<test id="s1-s2-t5" name="ISIN Detection Works" line="43">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:16.712304" elapsed="1.408177"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:18.120670" elapsed="0.000089"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.core.ticker import is_isin; assert is_isin('US0378331005'); assert not is_isin('AAPL'); print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:16.711872" elapsed="1.409245"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.121416" elapsed="0.000984"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.122620" elapsed="0.001015"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:16.711330" elapsed="1.412543"/>
+</test>
+<test id="s1-s2-t6" name="Storage Mode Management" line="49">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.125444" elapsed="0.102224"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:18.227831" elapsed="0.000075"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.core.storage import set_mode, get_mode, is_testing; set_mode('testing'); assert is_testing(); set_mode('production'); assert not is_testing(); print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:18.124908" elapsed="0.103316"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.228461" elapsed="0.000812"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.229469" elapsed="0.000878"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:18.124245" elapsed="0.106309"/>
+</test>
+<test id="s1-s2-t7" name="Calculator CAGR Edge Cases" line="55">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.231889" elapsed="0.203145"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:18.435406" elapsed="0.000147"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.metrics.calculator import _cagr; assert _cagr(100,200,3) is not None; assert _cagr(None,200,3) is None; assert _cagr(0,200,3) is None; assert _cagr(-1,200,3) is None; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:18.231459" elapsed="0.204720"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.436683" elapsed="0.001629"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.438715" elapsed="0.001771"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:18.230852" elapsed="0.210063"/>
+</test>
+<test id="s1-s2-t8" name="Export Format Enum" line="61">
+<kw name="Run Python">
+<kw name="Run Process" owner="Process">
+<var>${result}</var>
+<arg>${PYTHON}</arg>
+<arg>-c</arg>
+<arg>${code}</arg>
+<arg>cwd=/home/overdrive/claude/lince-investor/lynx-fa-analysis/robot/..</arg>
+<arg>timeout=30s</arg>
+<arg>stderr=STDOUT</arg>
+<doc>Runs a process and waits for it to complete.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.443656" elapsed="0.203598"/>
+</kw>
+<return>
+<value>${result}</value>
+<status status="PASS" start="2026-04-15T09:40:18.647442" elapsed="0.000081"/>
+</return>
+<var>${result}</var>
+<arg>from lynx.export import ExportFormat; assert ExportFormat.TXT.value=='txt'; assert ExportFormat.HTML.value=='html'; assert ExportFormat.PDF.value=='pdf'; print('OK')</arg>
+<status status="PASS" start="2026-04-15T09:40:18.442710" elapsed="0.205140"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${result.stdout}</arg>
+<arg>OK</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.648082" elapsed="0.000875"/>
+</kw>
+<kw name="Should Be Equal As Integers" owner="BuiltIn">
+<arg>${result.rc}</arg>
+<arg>0</arg>
+<doc>Fails if objects are unequal after converting them to integers.</doc>
+<status status="PASS" start="2026-04-15T09:40:18.649185" elapsed="0.000928"/>
+</kw>
+<status status="PASS" start="2026-04-15T09:40:18.441539" elapsed="0.208815"/>
+</test>
+<doc>API acceptance tests for Lynx FA Python API</doc>
+<status status="PASS" start="2026-04-15T09:40:15.871354" elapsed="2.779503"/>
+</suite>
+<status status="PASS" start="2026-04-15T09:40:13.264146" elapsed="5.387737"/>
+</suite>
+<statistics>
+<total>
+<stat pass="18" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat name="Cli Tests &amp; Api Tests" id="s1" pass="18" fail="0" skip="0">Cli Tests &amp; Api Tests</stat>
+<stat name="Cli Tests" id="s1-s1" pass="10" fail="0" skip="0">Cli Tests &amp; Api Tests.Cli Tests</stat>
+<stat name="Api Tests" id="s1-s2" pass="8" fail="0" skip="0">Cli Tests &amp; Api Tests.Api Tests</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>
