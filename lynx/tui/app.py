@@ -243,6 +243,8 @@ class ReportView(Vertical):
                 yield _build_moat(r)
             with TabPane("Intrinsic Value"):
                 yield _build_iv(r)
+            with TabPane("Conclusion"):
+                yield _build_conclusion(r)
             with TabPane("Financials"):
                 yield _build_financials(r)
             with TabPane("Filings"):
@@ -712,6 +714,25 @@ def _build_iv(r: AnalysisReport) -> DataTable:
     _r3(t, f"{tag('Asset')}Tangible Book", f"${iv.asset_based_value:.4f}" if iv.asset_based_value else "N/A", _mos(iv.margin_of_safety_asset))
     if iv.lynch_fair_value:
         _r3(t, "Lynch Fair Value", f"${iv.lynch_fair_value:.2f}", "")
+    return t
+
+
+def _build_conclusion(r: AnalysisReport) -> DataTable:
+    from lynx.core.conclusion import generate_conclusion
+    c = generate_conclusion(r)
+    t = DataTable(zebra_stripes=True)
+    t.add_columns("Item", "Details")
+    _r2(t, "Verdict", f"{c.verdict} ({c.overall_score:.0f}/100)")
+    _r2(t, "Summary", c.summary)
+    for cat in ("valuation", "profitability", "solvency", "growth", "moat"):
+        score = c.category_scores.get(cat, 0)
+        summary = c.category_summaries.get(cat, "")
+        _r2(t, f"{cat.title()} ({score:.0f})", summary)
+    for i, s in enumerate(c.strengths, 1):
+        _r2(t, f"Strength {i}", s)
+    for i, risk in enumerate(c.risks, 1):
+        _r2(t, f"Risk {i}", risk)
+    _r2(t, "Tier Note", c.tier_note)
     return t
 
 

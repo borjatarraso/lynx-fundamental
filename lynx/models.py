@@ -225,6 +225,19 @@ class FinancialStatement:
 
 
 @dataclass
+class AnalysisConclusion:
+    """Synthesized assessment conclusion from the full analysis."""
+    overall_score: float = 0.0          # 0-100
+    verdict: str = ""                   # Strong Buy / Buy / Hold / Caution / Avoid
+    summary: str = ""                   # 2-3 sentence narrative
+    category_scores: dict = field(default_factory=dict)    # per-category scores
+    category_summaries: dict = field(default_factory=dict)  # per-category one-liner
+    strengths: list = field(default_factory=list)           # top positive signals
+    risks: list = field(default_factory=list)               # top negative signals
+    tier_note: str = ""                 # tier-specific methodology note
+
+
+@dataclass
 class MetricExplanation:
     """Explanation of a financial metric."""
     key: str

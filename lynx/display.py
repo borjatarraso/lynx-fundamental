@@ -165,6 +165,7 @@ def display_full_report(report: AnalysisReport) -> None:
     _display_growth(report)
     _display_moat(report)
     _display_intrinsic_value(report)
+    _display_conclusion(report)
     _display_financials(report)
     _display_filings(report)
     _display_news(report)
@@ -401,6 +402,51 @@ def _display_intrinsic_value(report: AnalysisReport) -> None:
             "[dim]  Note: For micro/nano caps, NCAV and tangible book are more reliable "
             "than DCF. DCF requires predictable cash flows which small companies lack.[/]"
         )
+
+
+def _display_conclusion(report: AnalysisReport) -> None:
+    from lynx.core.conclusion import generate_conclusion
+
+    c = generate_conclusion(report)
+    tier = report.profile.tier
+
+    verdict_colors = {
+        "Strong Buy": "bold green", "Buy": "green",
+        "Hold": "yellow", "Caution": "#ff8800", "Avoid": "bold red",
+    }
+    vc = verdict_colors.get(c.verdict, "white")
+
+    # Verdict panel
+    console.print(Panel(
+        f"[{vc}]{c.verdict}[/]  —  Score: {fmt_score(c.overall_score)}\n\n"
+        f"{c.summary}\n\n"
+        f"[dim]{c.tier_note}[/]",
+        title="[bold]Assessment Conclusion[/]",
+        border_style=vc,
+    ))
+
+    # Category breakdown
+    t = Table(title="Category Scores", show_lines=True, border_style="cyan")
+    t.add_column("Category", style="bold", min_width=16)
+    t.add_column("Score", justify="right", min_width=10)
+    t.add_column("Summary", min_width=40)
+    for cat in ("valuation", "profitability", "solvency", "growth", "moat"):
+        score = c.category_scores.get(cat, 0)
+        summary = c.category_summaries.get(cat, "")
+        t.add_row(cat.title(), fmt_score(score), summary)
+    console.print(t)
+
+    # Strengths & Risks
+    if c.strengths or c.risks:
+        sr = Table(show_header=True, border_style="green")
+        sr.add_column("Strengths", style="green", min_width=40)
+        sr.add_column("Risks", style="red", min_width=40)
+        max_len = max(len(c.strengths), len(c.risks))
+        for i in range(max_len):
+            s = c.strengths[i] if i < len(c.strengths) else ""
+            r = c.risks[i] if i < len(c.risks) else ""
+            sr.add_row(s, r)
+        console.print(sr)
 
 
 def _display_financials(report: AnalysisReport) -> None:
