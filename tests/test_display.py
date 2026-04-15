@@ -3,12 +3,22 @@
 import pytest
 from lynx.display import (
     _assess_burn,
+    _assess_cagr,
     _assess_current,
     _assess_de,
     _assess_dilution,
+    _assess_dividend_yield,
+    _assess_earnings_yield,
+    _assess_ebitda_margin,
     _assess_ev_ebitda,
+    _assess_ev_revenue,
+    _assess_fcf_margin,
     _assess_gross_margin,
+    _assess_growth,
+    _assess_interest_coverage,
     _assess_ncav_vs_price,
+    _assess_net_margin,
+    _assess_operating_margin,
     _assess_pb,
     _assess_pe,
     _assess_peg,
@@ -197,3 +207,132 @@ class TestAssessDilution:
 
     def test_none(self):
         assert _assess_dilution(None, CompanyTier.MICRO) == ""
+
+
+class TestAssessEvRevenue:
+    def test_none(self):
+        assert _assess_ev_revenue(None, CompanyTier.MEGA) == ""
+
+    def test_cheap(self):
+        assert "cheap" in _assess_ev_revenue(0.5, CompanyTier.MEGA).lower()
+
+    def test_expensive(self):
+        assert "expensive" in _assess_ev_revenue(10, CompanyTier.MEGA).lower()
+
+    def test_micro_thresholds(self):
+        result = _assess_ev_revenue(2, CompanyTier.MICRO)
+        assert result != ""
+
+
+class TestAssessEarningsYield:
+    def test_none(self):
+        assert _assess_earnings_yield(None) == ""
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_earnings_yield(0.12)
+
+    def test_low(self):
+        assert "Low" in _assess_earnings_yield(0.03)
+
+    def test_negative(self):
+        assert "Negative" in _assess_earnings_yield(-0.05)
+
+
+class TestAssessDividendYield:
+    def test_none(self):
+        assert _assess_dividend_yield(None, CompanyTier.MEGA) == ""
+
+    def test_no_dividend(self):
+        assert "No dividend" in _assess_dividend_yield(0, CompanyTier.MEGA)
+
+    def test_high(self):
+        assert "High" in _assess_dividend_yield(0.05, CompanyTier.MEGA)
+
+    def test_very_high_warning(self):
+        assert "sustainability" in _assess_dividend_yield(0.08, CompanyTier.MEGA).lower()
+
+
+class TestAssessOperatingMargin:
+    def test_none(self):
+        assert _assess_operating_margin(None, CompanyTier.MEGA) == ""
+
+    def test_loss(self):
+        assert "loss" in _assess_operating_margin(-0.05, CompanyTier.MEGA).lower()
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_operating_margin(0.30, CompanyTier.MEGA)
+
+
+class TestAssessNetMargin:
+    def test_none(self):
+        assert _assess_net_margin(None, CompanyTier.MEGA) == ""
+
+    def test_loss(self):
+        assert "Loss" in _assess_net_margin(-0.10, CompanyTier.MEGA)
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_net_margin(0.25, CompanyTier.MEGA)
+
+
+class TestAssessFcfMargin:
+    def test_none(self):
+        assert _assess_fcf_margin(None, CompanyTier.MEGA) == ""
+
+    def test_negative(self):
+        assert "Negative" in _assess_fcf_margin(-0.05, CompanyTier.MEGA)
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_fcf_margin(0.25, CompanyTier.MEGA)
+
+
+class TestAssessEbitdaMargin:
+    def test_none(self):
+        assert _assess_ebitda_margin(None, CompanyTier.MEGA) == ""
+
+    def test_negative(self):
+        assert "Negative" in _assess_ebitda_margin(-0.10, CompanyTier.MEGA)
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_ebitda_margin(0.35, CompanyTier.MEGA)
+
+
+class TestAssessInterestCoverage:
+    def test_none(self):
+        assert _assess_interest_coverage(None, CompanyTier.MEGA) == ""
+
+    def test_very_strong(self):
+        assert "Very strong" in _assess_interest_coverage(10, CompanyTier.MEGA)
+
+    def test_cannot_cover(self):
+        assert "Cannot cover" in _assess_interest_coverage(0.5, CompanyTier.MEGA)
+
+    def test_tight(self):
+        assert "Tight" in _assess_interest_coverage(1.5, CompanyTier.MEGA)
+
+
+class TestAssessGrowth:
+    def test_none(self):
+        assert _assess_growth(None) == ""
+
+    def test_strong(self):
+        assert "strong" in _assess_growth(0.30).lower()
+
+    def test_positive(self):
+        assert "Positive" in _assess_growth(0.05)
+
+    def test_decline(self):
+        assert "decline" in _assess_growth(-0.15).lower()
+
+
+class TestAssessCagr:
+    def test_none(self):
+        assert _assess_cagr(None) == ""
+
+    def test_excellent(self):
+        assert "Excellent" in _assess_cagr(0.20)
+
+    def test_positive(self):
+        assert "Positive" in _assess_cagr(0.03)
+
+    def test_declining(self):
+        assert "Declining" in _assess_cagr(-0.10)

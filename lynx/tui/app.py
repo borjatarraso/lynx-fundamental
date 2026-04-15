@@ -490,10 +490,10 @@ def _build_valuation(r: AnalysisReport) -> DataTable:
     _r3(t, "P/S Ratio", _num(v.ps_ratio), "")
     _r3(t, "P/FCF", _num(v.p_fcf), _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive"))
     _r3(t, "EV/EBITDA", _num(v.ev_ebitda), _thr(v.ev_ebitda, [(8, "Cheap"), (12, "Fair"), (18, "Expensive")], "Very Expensive"))
-    _r3(t, "EV/Revenue", _num(v.ev_revenue), "")
+    _r3(t, "EV/Revenue", _num(v.ev_revenue), _thr(v.ev_revenue, [(1, "Very cheap"), (3, "Cheap"), (5, "Fair"), (8, "Expensive")], "Very expensive"))
     _r3(t, "PEG Ratio", _num(v.peg_ratio), _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued"))
-    _r3(t, "Earnings Yield", _pct(v.earnings_yield), "")
-    _r3(t, "Dividend Yield", _pct(v.dividend_yield), "")
+    _r3(t, "Earnings Yield", _pct(v.earnings_yield), _yield_assess(v.earnings_yield))
+    _r3(t, "Dividend Yield", _pct(v.dividend_yield), _div_assess(v.dividend_yield))
     _r3(t, "P/Tangible Book", _num(v.price_to_tangible_book), _thr(v.price_to_tangible_book, [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")], "Premium"))
     _r3(t, "P/NCAV (Net-Net)", _num(v.price_to_ncav), _thr(v.price_to_ncav, [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")], "Above NCAV"))
     _r3(t, "Enterprise Value", _money(v.enterprise_value), "")
@@ -509,10 +509,10 @@ def _build_profitability(r: AnalysisReport) -> DataTable:
     _r3(t, "ROA", _pct(p.roa), _thr(p.roa, [(0, "Negative"), (0.05, "Low"), (0.10, "Good")], "Excellent"))
     _r3(t, "ROIC", _pct(p.roic), _thr(p.roic, [(0, "Negative"), (0.07, "Below WACC"), (0.10, "Good"), (0.15, "Wide Moat")], "Exceptional"))
     _r3(t, "Gross Margin", _pct(p.gross_margin), "")
-    _r3(t, "Operating Margin", _pct(p.operating_margin), "")
-    _r3(t, "Net Margin", _pct(p.net_margin), "")
-    _r3(t, "FCF Margin", _pct(p.fcf_margin), "")
-    _r3(t, "EBITDA Margin", _pct(p.ebitda_margin), "")
+    _r3(t, "Operating Margin", _pct(p.operating_margin), _margin_assess(p.operating_margin, 0.25, 0.15, 0.05))
+    _r3(t, "Net Margin", _pct(p.net_margin), _margin_assess(p.net_margin, 0.20, 0.10, 0.05))
+    _r3(t, "FCF Margin", _pct(p.fcf_margin), _margin_assess(p.fcf_margin, 0.20, 0.10, 0.05))
+    _r3(t, "EBITDA Margin", _pct(p.ebitda_margin), _margin_assess(p.ebitda_margin, 0.30, 0.15, 0.05))
     return t
 
 
@@ -524,7 +524,7 @@ def _build_solvency(r: AnalysisReport) -> DataTable:
     _r3(t, "Debt/EBITDA", _num(s.debt_to_ebitda), _thr(s.debt_to_ebitda, [(1, "Very Low"), (2, "Manageable"), (3, "Moderate")], "Heavy"))
     _r3(t, "Current Ratio", _num(s.current_ratio), _thr(s.current_ratio, [(1.0, "Liquidity Risk"), (1.5, "Adequate"), (2.0, "Good")], "Strong"))
     _r3(t, "Quick Ratio", _num(s.quick_ratio), "")
-    _r3(t, "Interest Coverage", _num(s.interest_coverage, 1), "")
+    _r3(t, "Interest Coverage", _num(s.interest_coverage, 1), _thr(s.interest_coverage, [(1, "Cannot cover"), (2, "Tight"), (4, "Adequate"), (8, "Strong")], "Very strong"))
     _r3(t, "Altman Z-Score", _num(s.altman_z_score), _thr(s.altman_z_score, [(1.81, "Distress"), (2.99, "Grey Zone")], "Safe"))
     _r3(t, "Cash Burn Rate (/yr)", _money(s.cash_burn_rate), _burn(s.cash_burn_rate))
     _r3(t, "Cash Runway", f"{s.cash_runway_years:.1f} yrs" if s.cash_runway_years is not None else "N/A", "")
@@ -540,16 +540,16 @@ def _build_solvency(r: AnalysisReport) -> DataTable:
 def _build_growth(r: AnalysisReport) -> DataTable:
     g = r.growth
     t = DataTable(zebra_stripes=True)
-    t.add_columns("Metric", "Value")
-    _r2(t, "Revenue Growth (YoY)", _pct(g.revenue_growth_yoy))
-    _r2(t, "Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y))
-    _r2(t, "Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y))
-    _r2(t, "Earnings Growth (YoY)", _pct(g.earnings_growth_yoy))
-    _r2(t, "Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y))
-    _r2(t, "Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y))
-    _r2(t, "FCF Growth (YoY)", _pct(g.fcf_growth_yoy))
-    _r2(t, "Book Value Growth (YoY)", _pct(g.book_value_growth_yoy))
-    _r2(t, "Share Dilution (YoY)", _pct(g.shares_growth_yoy))
+    t.add_columns("Metric", "Value", "Assessment")
+    _r3(t, "Revenue Growth (YoY)", _pct(g.revenue_growth_yoy), _growth_assess(g.revenue_growth_yoy))
+    _r3(t, "Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y), _cagr_assess(g.revenue_cagr_3y))
+    _r3(t, "Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y), _cagr_assess(g.revenue_cagr_5y))
+    _r3(t, "Earnings Growth (YoY)", _pct(g.earnings_growth_yoy), _growth_assess(g.earnings_growth_yoy))
+    _r3(t, "Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y), _cagr_assess(g.earnings_cagr_3y))
+    _r3(t, "Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y), _cagr_assess(g.earnings_cagr_5y))
+    _r3(t, "FCF Growth (YoY)", _pct(g.fcf_growth_yoy), _growth_assess(g.fcf_growth_yoy))
+    _r3(t, "Book Value Growth (YoY)", _pct(g.book_value_growth_yoy), _growth_assess(g.book_value_growth_yoy))
+    _r3(t, "Share Dilution (YoY)", _pct(g.shares_growth_yoy), _dilution_assess(g.shares_growth_yoy))
     return t
 
 
@@ -710,6 +710,71 @@ def _thr(val, thresholds, over_label) -> str:
         for threshold, label in thresholds:
             if v < threshold: return label
         return over_label
+    except Exception: return ""
+
+def _yield_assess(val) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v > 0.10: return "Excellent"
+        if v > 0.07: return "Good"
+        if v > 0.05: return "Fair"
+        if v > 0: return "Low"
+        return "Negative"
+    except Exception: return ""
+
+def _div_assess(val) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v <= 0: return "No dividend"
+        if v > 0.06: return "Very high"
+        if v > 0.04: return "High"
+        if v > 0.02: return "Moderate"
+        return "Low"
+    except Exception: return ""
+
+def _margin_assess(val, exc: float, good: float, fair: float) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v < 0: return "Negative"
+        if v > exc: return "Excellent"
+        if v > good: return "Good"
+        if v > fair: return "Moderate"
+        return "Thin"
+    except Exception: return ""
+
+def _growth_assess(val) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v > 0.25: return "Very strong"
+        if v > 0.10: return "Good"
+        if v > 0: return "Positive"
+        if v > -0.10: return "Slight decline"
+        return "Declining"
+    except Exception: return ""
+
+def _cagr_assess(val) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v > 0.15: return "Excellent"
+        if v > 0.08: return "Good"
+        if v > 0: return "Positive"
+        return "Declining"
+    except Exception: return ""
+
+def _dilution_assess(val) -> str:
+    if val is None: return ""
+    try:
+        v = float(val)
+        if v < -0.02: return "Buybacks"
+        if v < 0.01: return "Minimal"
+        if v < 0.05: return "Modest (<5%)"
+        if v < 0.10: return "Significant"
+        return "Heavy dilution"
     except Exception: return ""
 
 def _safe_tier(tier) -> str:

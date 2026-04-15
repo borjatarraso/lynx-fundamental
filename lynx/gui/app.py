@@ -799,10 +799,10 @@ class LynxFAGUI:
             ("P/S Ratio", _num(v.ps_ratio), ""),
             ("P/FCF", _num(v.p_fcf), _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive")),
             ("EV/EBITDA", _num(v.ev_ebitda), _thr(v.ev_ebitda, [(8, "Cheap"), (12, "Fair"), (18, "Expensive")], "Very Expensive")),
-            ("EV/Revenue", _num(v.ev_revenue), ""),
+            ("EV/Revenue", _num(v.ev_revenue), _thr(v.ev_revenue, [(1, "Very cheap"), (3, "Cheap"), (5, "Fair"), (8, "Expensive")], "Very expensive")),
             ("PEG Ratio", _num(v.peg_ratio), _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued")),
-            ("Earnings Yield", _pct(v.earnings_yield), ""),
-            ("Dividend Yield", _pct(v.dividend_yield), ""),
+            ("Earnings Yield", _pct(v.earnings_yield), _thr(v.earnings_yield, [(0, "Negative"), (0.05, "Low"), (0.07, "Fair"), (0.10, "Good")], "Excellent")),
+            ("Dividend Yield", _pct(v.dividend_yield), _thr(v.dividend_yield, [(0, "No dividend"), (0.02, "Low"), (0.04, "Moderate"), (0.06, "High")], "Very high")),
             ("P/Tangible Book", _num(v.price_to_tangible_book), _thr(v.price_to_tangible_book, [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")], "Premium")),
             ("P/NCAV (Net-Net)", _num(v.price_to_ncav), _thr(v.price_to_ncav, [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")], "Above NCAV")),
             ("Enterprise Value", _money(v.enterprise_value), ""),
@@ -825,11 +825,11 @@ class LynxFAGUI:
             ("ROE", _pct(p.roe), _thr(p.roe, [(0, "Negative"), (0.10, "Below Avg"), (0.15, "Good"), (0.20, "Excellent")], "Outstanding")),
             ("ROA", _pct(p.roa), _thr(p.roa, [(0, "Negative"), (0.05, "Low"), (0.10, "Good")], "Excellent")),
             ("ROIC", _pct(p.roic), _thr(p.roic, [(0, "Negative"), (0.07, "Below WACC"), (0.10, "Good"), (0.15, "Wide Moat")], "Exceptional")),
-            ("Gross Margin", _pct(p.gross_margin), ""),
-            ("Operating Margin", _pct(p.operating_margin), ""),
-            ("Net Margin", _pct(p.net_margin), ""),
-            ("FCF Margin", _pct(p.fcf_margin), ""),
-            ("EBITDA Margin", _pct(p.ebitda_margin), ""),
+            ("Gross Margin", _pct(p.gross_margin), _thr(p.gross_margin, [(0, "Negative"), (0.20, "Thin"), (0.40, "Good"), (0.60, "Strong")], "Very strong")),
+            ("Operating Margin", _pct(p.operating_margin), _thr(p.operating_margin, [(0, "Loss"), (0.05, "Thin"), (0.15, "Good"), (0.25, "Excellent")], "Outstanding")),
+            ("Net Margin", _pct(p.net_margin), _thr(p.net_margin, [(0, "Loss"), (0.05, "Thin"), (0.10, "Good"), (0.20, "Excellent")], "Outstanding")),
+            ("FCF Margin", _pct(p.fcf_margin), _thr(p.fcf_margin, [(0, "Negative"), (0.05, "Weak"), (0.10, "Good"), (0.20, "Strong")], "Excellent")),
+            ("EBITDA Margin", _pct(p.ebitda_margin), _thr(p.ebitda_margin, [(0, "Negative"), (0.05, "Thin"), (0.15, "Good"), (0.30, "Excellent")], "Outstanding")),
         ]
         for i, (label, value, assessment) in enumerate(rows):
             self._add_metric_row(frame, i, label, value, assessment)
@@ -849,7 +849,7 @@ class LynxFAGUI:
             ("Debt/EBITDA", _num(s.debt_to_ebitda), _thr(s.debt_to_ebitda, [(1, "Very Low"), (2, "Manageable"), (3, "Moderate")], "Heavy")),
             ("Current Ratio", _num(s.current_ratio), _thr(s.current_ratio, [(1.0, "Liquidity Risk"), (1.5, "Adequate"), (2.0, "Good")], "Strong")),
             ("Quick Ratio", _num(s.quick_ratio), ""),
-            ("Interest Coverage", _num(s.interest_coverage, 1), ""),
+            ("Interest Coverage", _num(s.interest_coverage, 1), _thr(s.interest_coverage, [(1, "Cannot cover"), (2, "Tight"), (4, "Adequate"), (8, "Strong")], "Very strong")),
             ("Altman Z-Score", _num(s.altman_z_score), _thr(s.altman_z_score, [(1.81, "Distress"), (2.99, "Grey Zone")], "Safe")),
             ("Cash Burn Rate (/yr)", _money(s.cash_burn_rate), _burn(s.cash_burn_rate)),
             ("Cash Runway", f"{s.cash_runway_years:.1f} yrs" if s.cash_runway_years is not None else "N/A", ""),
@@ -873,19 +873,35 @@ class LynxFAGUI:
         )
         self._sections.append(card)
         frame = card.frame
+
+        def _ga(val):
+            return _thr(val, [(0, "Declining"), (0.10, "Positive"), (0.25, "Good")], "Very strong") if val is not None else ""
+        def _ca(val):
+            return _thr(val, [(0, "Declining"), (0.08, "Positive"), (0.15, "Good")], "Excellent") if val is not None else ""
+        def _da(val):
+            if val is None: return ""
+            try:
+                v = float(val)
+                if v < -0.02: return "Buybacks"
+                if v < 0.01: return "Minimal"
+                if v < 0.05: return "Modest"
+                if v < 0.10: return "Significant"
+                return "Heavy dilution"
+            except Exception: return ""
+
         rows = [
-            ("Revenue Growth (YoY)", _pct(g.revenue_growth_yoy)),
-            ("Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y)),
-            ("Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y)),
-            ("Earnings Growth (YoY)", _pct(g.earnings_growth_yoy)),
-            ("Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y)),
-            ("Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y)),
-            ("FCF Growth (YoY)", _pct(g.fcf_growth_yoy)),
-            ("Book Value Growth (YoY)", _pct(g.book_value_growth_yoy)),
-            ("Share Dilution (YoY)", _pct(g.shares_growth_yoy)),
+            ("Revenue Growth (YoY)", _pct(g.revenue_growth_yoy), _ga(g.revenue_growth_yoy)),
+            ("Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y), _ca(g.revenue_cagr_3y)),
+            ("Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y), _ca(g.revenue_cagr_5y)),
+            ("Earnings Growth (YoY)", _pct(g.earnings_growth_yoy), _ga(g.earnings_growth_yoy)),
+            ("Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y), _ca(g.earnings_cagr_3y)),
+            ("Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y), _ca(g.earnings_cagr_5y)),
+            ("FCF Growth (YoY)", _pct(g.fcf_growth_yoy), _ga(g.fcf_growth_yoy)),
+            ("Book Value Growth (YoY)", _pct(g.book_value_growth_yoy), _ga(g.book_value_growth_yoy)),
+            ("Share Dilution (YoY)", _pct(g.shares_growth_yoy), _da(g.shares_growth_yoy)),
         ]
-        for i, (label, value) in enumerate(rows):
-            self._add_row(frame, i, label, value)
+        for i, (label, value, assessment) in enumerate(rows):
+            self._add_metric_row(frame, i, label, value, assessment)
 
     # ---- Moat ------------------------------------------------------------
 

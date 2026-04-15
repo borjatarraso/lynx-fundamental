@@ -191,10 +191,10 @@ def _display_valuation(report: AnalysisReport) -> None:
     _add_metric_row(t, "P/S Ratio", fmt_num(v.ps_ratio), _assess_ps(v.ps_ratio, tier), rel("ps_ratio"))
     _add_metric_row(t, "P/FCF", fmt_num(v.p_fcf), _assess_pfcf(v.p_fcf, tier), rel("p_fcf"))
     _add_metric_row(t, "EV/EBITDA", fmt_num(v.ev_ebitda), _assess_ev_ebitda(v.ev_ebitda, tier), rel("ev_ebitda"))
-    _add_metric_row(t, "EV/Revenue", fmt_num(v.ev_revenue), "", rel("ev_revenue"))
+    _add_metric_row(t, "EV/Revenue", fmt_num(v.ev_revenue), _assess_ev_revenue(v.ev_revenue, tier), rel("ev_revenue"))
     _add_metric_row(t, "PEG Ratio", fmt_num(v.peg_ratio), _assess_peg(v.peg_ratio), rel("peg_ratio"))
-    _add_metric_row(t, "Earnings Yield", fmt_pct(v.earnings_yield), "", rel("earnings_yield"))
-    _add_metric_row(t, "Dividend Yield", fmt_pct(v.dividend_yield), "", rel("dividend_yield"))
+    _add_metric_row(t, "Earnings Yield", fmt_pct(v.earnings_yield), _assess_earnings_yield(v.earnings_yield), rel("earnings_yield"))
+    _add_metric_row(t, "Dividend Yield", fmt_pct(v.dividend_yield), _assess_dividend_yield(v.dividend_yield, tier), rel("dividend_yield"))
     _add_metric_row(t, "P/Tangible Book", fmt_num(v.price_to_tangible_book), _assess_ptb(v.price_to_tangible_book), rel("price_to_tangible_book"))
     _add_metric_row(t, "P/NCAV (Net-Net)", fmt_num(v.price_to_ncav), _assess_pncav(v.price_to_ncav), rel("price_to_ncav"))
 
@@ -215,10 +215,10 @@ def _display_profitability(report: AnalysisReport) -> None:
     _add_metric_row(t, "ROA", fmt_pct(p.roa), _assess_roa(p.roa), rel("roa"))
     _add_metric_row(t, "ROIC", fmt_pct(p.roic), _assess_roic(p.roic, tier), rel("roic"))
     _add_metric_row(t, "Gross Margin", fmt_pct(p.gross_margin), _assess_gross_margin(p.gross_margin, tier), rel("gross_margin"))
-    _add_metric_row(t, "Operating Margin", fmt_pct(p.operating_margin), "", rel("operating_margin"))
-    _add_metric_row(t, "Net Margin", fmt_pct(p.net_margin), "", rel("net_margin"))
-    _add_metric_row(t, "FCF Margin", fmt_pct(p.fcf_margin), "", rel("fcf_margin"))
-    _add_metric_row(t, "EBITDA Margin", fmt_pct(p.ebitda_margin), "", rel("ebitda_margin"))
+    _add_metric_row(t, "Operating Margin", fmt_pct(p.operating_margin), _assess_operating_margin(p.operating_margin, tier), rel("operating_margin"))
+    _add_metric_row(t, "Net Margin", fmt_pct(p.net_margin), _assess_net_margin(p.net_margin, tier), rel("net_margin"))
+    _add_metric_row(t, "FCF Margin", fmt_pct(p.fcf_margin), _assess_fcf_margin(p.fcf_margin, tier), rel("fcf_margin"))
+    _add_metric_row(t, "EBITDA Margin", fmt_pct(p.ebitda_margin), _assess_ebitda_margin(p.ebitda_margin, tier), rel("ebitda_margin"))
 
     console.print(t)
 
@@ -243,7 +243,7 @@ def _display_solvency(report: AnalysisReport) -> None:
     _add_metric_row(t, "Debt/EBITDA", fmt_num(s.debt_to_ebitda), _assess_debt_ebitda(s.debt_to_ebitda), rel("debt_to_ebitda"))
     _add_metric_row(t, "Current Ratio", fmt_num(s.current_ratio), _assess_current(s.current_ratio, tier), rel("current_ratio"))
     _add_metric_row(t, "Quick Ratio", fmt_num(s.quick_ratio), _assess_quick(s.quick_ratio), rel("quick_ratio"))
-    _add_metric_row(t, "Interest Coverage", fmt_num(s.interest_coverage, 1), "", rel("interest_coverage"))
+    _add_metric_row(t, "Interest Coverage", fmt_num(s.interest_coverage, 1), _assess_interest_coverage(s.interest_coverage, tier), rel("interest_coverage"))
     _add_metric_row(t, "Altman Z-Score", fmt_num(s.altman_z_score), _assess_zscore(s.altman_z_score), rel("altman_z_score"))
 
     # Survival metrics (shown for small/micro/nano)
@@ -271,14 +271,14 @@ def _display_growth(report: AnalysisReport) -> None:
     t.add_column("Value", justify="right", min_width=15)
     t.add_column("Assessment", min_width=28)
 
-    _add_metric_row(t, "Revenue Growth (YoY)", fmt_pct(g.revenue_growth_yoy), "", rel("revenue_growth_yoy"))
-    _add_metric_row(t, "Revenue CAGR (3Y)", fmt_pct(g.revenue_cagr_3y), "", rel("revenue_cagr_3y"))
-    _add_metric_row(t, "Revenue CAGR (5Y)", fmt_pct(g.revenue_cagr_5y), "", rel("revenue_cagr_5y"))
-    _add_metric_row(t, "Earnings Growth (YoY)", fmt_pct(g.earnings_growth_yoy), "", rel("earnings_growth_yoy"))
-    _add_metric_row(t, "Earnings CAGR (3Y)", fmt_pct(g.earnings_cagr_3y), "", rel("earnings_cagr_3y"))
-    _add_metric_row(t, "Earnings CAGR (5Y)", fmt_pct(g.earnings_cagr_5y), "", rel("earnings_cagr_5y"))
-    _add_metric_row(t, "FCF Growth (YoY)", fmt_pct(g.fcf_growth_yoy), "", Relevance.RELEVANT)
-    _add_metric_row(t, "Book Value Growth (YoY)", fmt_pct(g.book_value_growth_yoy), "", Relevance.RELEVANT)
+    _add_metric_row(t, "Revenue Growth (YoY)", fmt_pct(g.revenue_growth_yoy), _assess_growth(g.revenue_growth_yoy), rel("revenue_growth_yoy"))
+    _add_metric_row(t, "Revenue CAGR (3Y)", fmt_pct(g.revenue_cagr_3y), _assess_cagr(g.revenue_cagr_3y), rel("revenue_cagr_3y"))
+    _add_metric_row(t, "Revenue CAGR (5Y)", fmt_pct(g.revenue_cagr_5y), _assess_cagr(g.revenue_cagr_5y), rel("revenue_cagr_5y"))
+    _add_metric_row(t, "Earnings Growth (YoY)", fmt_pct(g.earnings_growth_yoy), _assess_growth(g.earnings_growth_yoy), rel("earnings_growth_yoy"))
+    _add_metric_row(t, "Earnings CAGR (3Y)", fmt_pct(g.earnings_cagr_3y), _assess_cagr(g.earnings_cagr_3y), rel("earnings_cagr_3y"))
+    _add_metric_row(t, "Earnings CAGR (5Y)", fmt_pct(g.earnings_cagr_5y), _assess_cagr(g.earnings_cagr_5y), rel("earnings_cagr_5y"))
+    _add_metric_row(t, "FCF Growth (YoY)", fmt_pct(g.fcf_growth_yoy), _assess_growth(g.fcf_growth_yoy), Relevance.RELEVANT)
+    _add_metric_row(t, "Book Value Growth (YoY)", fmt_pct(g.book_value_growth_yoy), _assess_growth(g.book_value_growth_yoy), Relevance.RELEVANT)
 
     # Share dilution — critical for small/micro
     dilution_assess = _assess_dilution(g.shares_growth_yoy, tier)
@@ -651,3 +651,93 @@ def _assess_dilution(val, tier: CompanyTier) -> str:
     if val < 0.05: return "[yellow]Modest dilution (<5%)[/]"
     if val < 0.10: return "[#ff8800]Significant dilution (5-10%)[/]"
     return "[bold red]Heavy dilution (>10%) — value destruction[/]"
+
+def _assess_ev_revenue(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val < 0: return "[dim]Negative EV[/]"
+    if tier in (CompanyTier.MICRO, CompanyTier.NANO):
+        if val < 0.5: return "[green]Very cheap[/]"
+        if val < 1.5: return "[green]Cheap[/]"
+        if val < 3: return "[yellow]Fair[/]"
+        return "[#ff8800]Expensive for size[/]"
+    if val < 1: return "[green]Very cheap[/]"
+    if val < 3: return "[green]Cheap[/]"
+    if val < 5: return "[yellow]Fair[/]"
+    if val < 8: return "[#ff8800]Expensive[/]"
+    return "[red]Very expensive[/]"
+
+def _assess_earnings_yield(val) -> str:
+    if val is None: return ""
+    if val > 0.10: return "[green]Excellent yield[/]"
+    if val > 0.07: return "[green]Good yield[/]"
+    if val > 0.05: return "[yellow]Fair yield[/]"
+    if val > 0: return "[#ff8800]Low yield[/]"
+    return "[red]Negative earnings[/]"
+
+def _assess_dividend_yield(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val <= 0: return "[dim]No dividend[/]"
+    if val > 0.06: return "[#ff8800]Very high — check sustainability[/]"
+    if val > 0.04: return "[green]High yield[/]"
+    if val > 0.02: return "[green]Moderate yield[/]"
+    return "[yellow]Low yield[/]"
+
+def _assess_operating_margin(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val < 0: return "[red]Operating loss[/]"
+    if tier in (CompanyTier.MICRO, CompanyTier.NANO):
+        if val > 0.15: return "[green]Strong for size[/]"
+        if val > 0.05: return "[yellow]Moderate[/]"
+        return "[#ff8800]Thin margins[/]"
+    if val > 0.25: return "[green]Excellent[/]"
+    if val > 0.15: return "[green]Good[/]"
+    if val > 0.05: return "[yellow]Moderate[/]"
+    return "[#ff8800]Thin margins[/]"
+
+def _assess_net_margin(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val < 0: return "[red]Loss-making[/]"
+    if val > 0.20: return "[green]Excellent[/]"
+    if val > 0.10: return "[green]Good[/]"
+    if val > 0.05: return "[yellow]Fair[/]"
+    return "[#ff8800]Thin[/]"
+
+def _assess_fcf_margin(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val < 0: return "[red]Negative FCF[/]"
+    if val > 0.20: return "[green]Excellent cash generation[/]"
+    if val > 0.10: return "[green]Strong[/]"
+    if val > 0.05: return "[yellow]Moderate[/]"
+    return "[#ff8800]Weak cash conversion[/]"
+
+def _assess_ebitda_margin(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val < 0: return "[red]Negative EBITDA[/]"
+    if val > 0.30: return "[green]Excellent[/]"
+    if val > 0.15: return "[green]Good[/]"
+    if val > 0.05: return "[yellow]Moderate[/]"
+    return "[#ff8800]Thin margins[/]"
+
+def _assess_interest_coverage(val, tier: CompanyTier) -> str:
+    if val is None: return ""
+    if val > 8: return "[green]Very strong[/]"
+    if val > 4: return "[green]Strong[/]"
+    if val > 2: return "[yellow]Adequate[/]"
+    if val > 1: return "[#ff8800]Tight[/]"
+    return "[bold red]Cannot cover interest[/]"
+
+def _assess_growth(val) -> str:
+    if val is None: return ""
+    if val > 0.25: return "[green]Very strong growth[/]"
+    if val > 0.10: return "[green]Good growth[/]"
+    if val > 0: return "[yellow]Positive[/]"
+    if val > -0.10: return "[#ff8800]Slight decline[/]"
+    return "[red]Significant decline[/]"
+
+def _assess_cagr(val) -> str:
+    if val is None: return ""
+    if val > 0.15: return "[green]Excellent[/]"
+    if val > 0.08: return "[green]Good[/]"
+    if val > 0: return "[yellow]Positive[/]"
+    if val > -0.05: return "[#ff8800]Slight decline[/]"
+    return "[red]Declining[/]"
