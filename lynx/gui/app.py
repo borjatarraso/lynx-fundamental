@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+from pathlib import Path
 from typing import Optional
 
 from lynx.models import AnalysisReport, CompanyTier
@@ -204,7 +205,8 @@ class CollapsibleCard:
     """A card with a clickable header that expands/collapses the content."""
 
     def __init__(self, parent: tk.Frame, title: str, icon: str = "",
-                 accent: str = ACCENT, expanded: bool = True) -> None:
+                 accent: str = ACCENT, expanded: bool = True,
+                 info_command=None) -> None:
         self.expanded = expanded
         self.accent = accent
 
@@ -236,6 +238,17 @@ class CollapsibleCard:
             bg=BG_CARD, fg=accent, anchor=tk.W,
         ).pack(side=tk.LEFT, fill=tk.X)
 
+        # Section info button (right side of header)
+        self._info_btn = None
+        if info_command:
+            self._info_btn = tk.Button(
+                self.header, text=" ? ", font=(_FAMILY, 9, "bold"),
+                bg=BORDER, fg=ACCENT, activebackground=BG_HOVER,
+                activeforeground=FG, relief=tk.FLAT, padx=2, pady=0,
+                cursor="hand2", command=info_command,
+            )
+            self._info_btn.pack(side=tk.RIGHT, padx=(0, 8))
+
         # Content area
         self.content = tk.Frame(
             self.outer, bg=BG_CARD,
@@ -244,11 +257,13 @@ class CollapsibleCard:
         if expanded:
             self.content.pack(fill=tk.X, pady=(0, 0))
 
-        # Bind click on entire header
+        # Bind click on entire header — but skip the info button so its
+        # command fires without also toggling the section.
         for widget in (self.header, self.arrow_label):
             widget.bind("<Button-1>", self._toggle)
         for child in self.header.winfo_children():
-            child.bind("<Button-1>", self._toggle)
+            if child is not self._info_btn:
+                child.bind("<Button-1>", self._toggle)
 
     def _toggle(self, event=None) -> None:
         self.expanded = not self.expanded
@@ -278,7 +293,7 @@ class LynxFAGUI:
         self._suppress_news_dialog: bool = False
 
         self.root = tk.Tk()
-        self.root.title(f"{DIAMOND} Lynx Fundamental Analysis {DIAMOND}")
+        self.root.title("Lynx Fundamental Analysis")
         self.root.configure(bg=BG)
         self.root.geometry("1150x900")
         self.root.minsize(960, 640)
@@ -310,12 +325,24 @@ class LynxFAGUI:
         toolbar = tk.Frame(self.root, bg=BG_SURFACE, pady=8, padx=16)
         toolbar.pack(fill=tk.X)
 
-        # Left side: branding
+        # Left side: branding with logo
         brand = tk.Frame(toolbar, bg=BG_SURFACE)
         brand.pack(side=tk.LEFT, padx=(0, 20))
 
+        # Toolbar logo
+        self._toolbar_logo = None
+        logo_path = Path(__file__).resolve().parent.parent.parent / "img" / "logo_sm_quarter_green.png"
+        if logo_path.exists():
+            try:
+                self._toolbar_logo = tk.PhotoImage(file=str(logo_path))
+                tk.Label(
+                    brand, image=self._toolbar_logo, bg=BG_SURFACE,
+                ).pack(side=tk.LEFT, padx=(0, 6))
+            except tk.TclError:
+                pass
+
         tk.Label(
-            brand, text=f"{DIAMOND} LYNX FA", font=(_FAMILY, 14, "bold"),
+            brand, text="Lynx Fundamental", font=(_FAMILY, 14, "bold"),
             bg=BG_SURFACE, fg=ACCENT,
         ).pack(side=tk.LEFT)
 
@@ -378,15 +405,57 @@ class LynxFAGUI:
             )
             cb.pack(side=tk.LEFT, padx=(0, 6))
 
-        # Status (right-aligned)
+        # Export button (left group, after checkboxes)
+        self.btn_export = tk.Button(
+            toolbar, text="  Export  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._on_export,
+        )
+        self.btn_export.pack(side=tk.LEFT, padx=(0, 6))
+
+        # Keybindings button
+        self.btn_keys = tk.Button(
+            toolbar, text="  Keybindings  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._show_controls,
+        )
+        self.btn_keys.pack(side=tk.LEFT, padx=(0, 6))
+
+        # Status bar — shows progress during analysis
         self.status_var = tk.StringVar(value="")
         self.status_label = tk.Label(
             toolbar, textvariable=self.status_var, font=FONT_SMALL,
-            bg=BG_SURFACE, fg=FG_DIM, anchor=tk.E,
+            bg=BG_SURFACE, fg=FG_DIM, anchor=tk.W,
         )
-        self.status_label.pack(side=tk.RIGHT, padx=(8, 0))
+        self.status_label.pack(side=tk.LEFT, padx=(8, 0))
 
-        # Expand all / Collapse all buttons (right side)
+        # ── Right side buttons (packed right-to-left) ──
+
+        # Quit (rightmost)
+        self.btn_quit = tk.Button(
+            toolbar, text="  Quit  ", font=FONT_BTN,
+            bg=BTN_DANGER_BG, fg=BTN_FG,
+            activebackground="#e06080", activeforeground=BTN_FG,
+            relief=tk.FLAT, padx=8, pady=3, cursor="hand2",
+            command=self.root.destroy,
+        )
+        self.btn_quit.pack(side=tk.RIGHT, padx=(4, 0))
+
+        # About (before Quit)
+        self.btn_about = tk.Button(
+            toolbar, text="  About  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._on_about,
+        )
+        self.btn_about.pack(side=tk.RIGHT, padx=(4, 0))
+
+        # Expand all / Collapse all (before About)
         self.btn_expand = tk.Button(
             toolbar, text=" Expand All ", font=FONT_BTN,
             bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
@@ -405,30 +474,16 @@ class LynxFAGUI:
         )
         self.btn_collapse.pack(side=tk.RIGHT, padx=(2, 0))
 
-        # Export button
-        self.btn_export = tk.Button(
-            toolbar, text="  Export  ", font=FONT_BTN,
-            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
-            activebackground=BG_HOVER, activeforeground=FG,
-            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
-            command=self._on_export,
-        )
-        self.btn_export.pack(side=tk.LEFT, padx=(0, 6))
-
-        # About button (right side, before expand/collapse)
-        self.btn_about = tk.Button(
-            toolbar, text="  About  ", font=FONT_BTN,
-            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
-            activebackground=BG_HOVER, activeforeground=FG,
-            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
-            command=self._on_about,
-        )
-        self.btn_about.pack(side=tk.RIGHT, padx=(8, 0))
-
         # Bind Enter key
         self.entry_ticker.bind("<Return>", lambda _: self._on_analyze())
         # Bind Escape to clear
         self.root.bind("<Escape>", lambda _: self._on_clear())
+        # Ctrl+P: show keyboard shortcuts / controls
+        self.root.bind("<Control-p>", lambda _: self._show_controls())
+        # Hidden keybindings (F-keys bypass Entry widget interception)
+        self.root.bind("<F9>", lambda _: self._ee_shake())
+        self.root.bind("<F10>", lambda _: self._ee_rainbow())
+        self.root.bind("<F11>", lambda _: self._ee_fortune())
 
     # ---- Scrollable result area ------------------------------------------
 
@@ -571,9 +626,9 @@ class LynxFAGUI:
                 from lynx.export import ExportFormat, export_report
                 try:
                     path = export_report(report, ExportFormat(chosen))
-                    self.root.after(0, lambda: messagebox.showinfo("Export Complete", f"Report exported to:\n{path}"))
+                    self.root.after(0, lambda p=str(path): self._show_export_success(p))
                 except Exception as e:
-                    self.root.after(0, lambda: messagebox.showerror("Export Failed", str(e)))
+                    self.root.after(0, lambda msg=str(e): self._show_export_error(msg))
 
             thread = threading.Thread(target=_run, daemon=True)
             thread.start()
@@ -586,23 +641,210 @@ class LynxFAGUI:
         ).pack(pady=(12, 0))
         win.bind("<Escape>", lambda _: win.destroy())
 
+    def _show_export_success(self, file_path: str) -> None:
+        """Show a styled export success dialog with a clickable file link."""
+        import subprocess
+        import platform
+
+        win = tk.Toplevel(self.root)
+        win.title("Export Complete")
+        win.configure(bg=BG)
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        # Success icon and title
+        tk.Label(
+            win, text=CHECK, font=(_FAMILY, 32),
+            bg=BG, fg=GREEN,
+        ).pack(pady=(20, 4))
+
+        tk.Label(
+            win, text="Report exported successfully", font=(_FAMILY, 13, "bold"),
+            bg=BG, fg=FG,
+        ).pack(pady=(0, 12))
+
+        # File path card
+        path_card = tk.Frame(win, bg=BG_CARD, padx=16, pady=10)
+        path_card.pack(fill=tk.X, padx=24, pady=(0, 4))
+
+        tk.Label(
+            path_card, text="Saved to:", font=FONT_SMALL_BOLD,
+            bg=BG_CARD, fg=FG_DIM, anchor=tk.W,
+        ).pack(fill=tk.X)
+
+        # Clickable file path
+        path_label = tk.Label(
+            path_card, text=file_path, font=FONT_MONO,
+            bg=BG_CARD, fg=ACCENT, anchor=tk.W, cursor="hand2",
+            wraplength=500, justify=tk.LEFT,
+        )
+        path_label.pack(fill=tk.X, pady=(2, 0))
+
+        def _open_file():
+            try:
+                sys = platform.system()
+                if sys == "Darwin":
+                    subprocess.Popen(["open", file_path])
+                elif sys == "Windows":
+                    subprocess.Popen(["start", "", file_path], shell=True)
+                else:
+                    subprocess.Popen(["xdg-open", file_path])
+            except Exception:
+                pass
+
+        def _open_folder():
+            try:
+                folder = str(Path(file_path).parent)
+                sys = platform.system()
+                if sys == "Darwin":
+                    subprocess.Popen(["open", folder])
+                elif sys == "Windows":
+                    subprocess.Popen(["explorer", folder])
+                else:
+                    subprocess.Popen(["xdg-open", folder])
+            except Exception:
+                pass
+
+        path_label.bind("<Button-1>", lambda _: _open_file())
+
+        # Hover effect on the path label
+        path_label.bind("<Enter>", lambda _: path_label.configure(fg=BTN_ACTIVE))
+        path_label.bind("<Leave>", lambda _: path_label.configure(fg=ACCENT))
+
+        # Hint
+        tk.Label(
+            win, text="Click the path to open the file",
+            font=FONT_SMALL, bg=BG, fg=FG_SUBTLE,
+        ).pack(pady=(2, 8))
+
+        # Buttons row
+        btn_row = tk.Frame(win, bg=BG)
+        btn_row.pack(pady=(0, 16))
+
+        tk.Button(
+            btn_row, text="  Open File  ", font=FONT_BTN,
+            bg=BTN_BG, fg=BTN_FG, activebackground=BTN_ACTIVE,
+            relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
+            command=_open_file,
+        ).pack(side=tk.LEFT, padx=(0, 6))
+
+        tk.Button(
+            btn_row, text="  Open Folder  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
+            command=_open_folder,
+        ).pack(side=tk.LEFT, padx=(0, 6))
+
+        tk.Button(
+            btn_row, text="  Close  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
+            command=win.destroy,
+        ).pack(side=tk.LEFT)
+
+        win.bind("<Escape>", lambda _: win.destroy())
+
+        # Center on screen
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{sx}+{sy}")
+
+    def _show_export_error(self, msg: str) -> None:
+        """Show a styled export error dialog."""
+        win = tk.Toplevel(self.root)
+        win.title("Export Failed")
+        win.configure(bg=BG)
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        tk.Label(
+            win, text=CROSS, font=(_FAMILY, 32),
+            bg=BG, fg=RED,
+        ).pack(pady=(20, 4))
+
+        tk.Label(
+            win, text="Export failed", font=(_FAMILY, 13, "bold"),
+            bg=BG, fg=RED,
+        ).pack(pady=(0, 12))
+
+        error_card = tk.Frame(win, bg=BG_CARD, padx=16, pady=10)
+        error_card.pack(fill=tk.X, padx=24, pady=(0, 12))
+
+        tk.Label(
+            error_card, text=msg, font=FONT,
+            bg=BG_CARD, fg=FG, wraplength=450, justify=tk.LEFT,
+        ).pack(fill=tk.X)
+
+        btn_frame = tk.Frame(win, bg=BG)
+        btn_frame.pack(pady=(0, 16))
+        tk.Button(
+            btn_frame, text="  Close  ", font=FONT_BTN,
+            bg=BTN_BG, fg=BTN_FG, activebackground=BTN_ACTIVE,
+            relief=tk.FLAT, padx=14, pady=4, cursor="hand2",
+            command=win.destroy,
+        ).pack(anchor=tk.CENTER)
+
+        win.bind("<Escape>", lambda _: win.destroy())
+
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{sx}+{sy}")
+
+    def _show_controls(self) -> None:
+        """Show keyboard shortcuts and controls dialog (Ctrl+P)."""
+        shortcuts = [
+            ("Enter", "Analyze ticker"),
+            ("Escape", "Clear / Reset"),
+            ("Ctrl+P", "Show this controls dialog"),
+            ("Scroll", "Navigate results"),
+            ("Click section header", "Expand / Collapse section"),
+            ("Click ?", "Explain section or metric"),
+        ]
+        sections = []
+        for key, action in shortcuts:
+            sections.append((key, action))
+        self._show_info_popup(
+            "Keyboard Shortcuts & Controls",
+            "lynx-fundamental — Graphical Interface",
+            sections,
+        )
+
     def _on_about(self) -> None:
         from lynx import get_about_text
         about = get_about_text()
 
         win = tk.Toplevel(self.root)
-        win.title(f"{DIAMOND} About Lynx FA")
+        win.title("About lynx-fundamental")
         win.configure(bg=BG)
-        win.geometry("620x560")
+        win.configure(width=620, height=700)
         win.resizable(False, False)
         win.transient(self.root)
         win.grab_set()
 
+        # Logo
+        logo_path = Path(__file__).resolve().parent.parent.parent / "img" / "logo_sm_green.png"
+        if logo_path.exists():
+            try:
+                win._about_logo = tk.PhotoImage(file=str(logo_path))
+                tk.Label(
+                    win, image=win._about_logo, bg=BG,
+                ).pack(pady=(16, 8))
+            except tk.TclError:
+                pass
+
         # Title
         tk.Label(
-            win, text=f"{DIAMOND}  {about['name']}  {DIAMOND}",
+            win, text=about['name'],
             font=(_FAMILY, 18, "bold"), bg=BG, fg=ACCENT,
-        ).pack(pady=(24, 4))
+        ).pack(pady=(4, 4))
 
         tk.Label(
             win, text=about['suite'],
@@ -649,25 +891,43 @@ class LynxFAGUI:
             font=FONT_SMALL_BOLD, bg=BG_CARD, fg=ACCENT,
         ).pack(pady=(8, 4))
 
+        license_inner = tk.Frame(license_frame, bg=BG_CARD)
+        license_inner.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+
+        license_scroll = ttk.Scrollbar(license_inner, orient=tk.VERTICAL)
+        license_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
         license_text = tk.Text(
-            license_frame, font=FONT_SMALL, bg=BG_CARD, fg=FG_DIM,
-            wrap=tk.WORD, relief=tk.FLAT, height=12,
+            license_inner, font=FONT_SMALL, bg=BG_CARD, fg=FG_DIM,
+            wrap=tk.WORD, relief=tk.FLAT, height=14,
             highlightthickness=0, padx=12, pady=4,
+            yscrollcommand=license_scroll.set,
         )
-        license_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        license_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        license_scroll.configure(command=license_text.yview)
         license_text.insert("1.0", about["license_text"])
         license_text.configure(state=tk.DISABLED)
 
-        # Close button
+        # Close button (centered)
+        close_frame = tk.Frame(win, bg=BG)
+        close_frame.pack(fill=tk.X, pady=(8, 16))
         tk.Button(
-            win, text="  Close  ", font=FONT_BTN,
+            close_frame, text="  Close  ", font=(_FAMILY, 11, "bold"),
             bg=BTN_BG, fg=BTN_FG,
             activebackground=BTN_ACTIVE, activeforeground=BTN_FG,
-            relief=tk.FLAT, padx=16, pady=4, cursor="hand2",
+            relief=tk.FLAT, padx=20, pady=6, cursor="hand2",
             command=win.destroy,
-        ).pack(pady=(0, 16))
+        ).pack(anchor=tk.CENTER)
 
         win.bind("<Escape>", lambda _: win.destroy())
+
+        # Center on screen after all widgets are packed
+        win.update_idletasks()
+        w = win.winfo_reqwidth()
+        h = win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{sx}+{sy}")
 
     def _toggle_all(self, expand: bool) -> None:
         for card in self._sections:
@@ -676,61 +936,119 @@ class LynxFAGUI:
             elif not expand and card.expanded:
                 card._toggle()
 
+    # ---- Hidden features -------------------------------------------------
+
+    def _ee_shake(self) -> None:
+        from lynx.easter import tk_fireworks
+        tk_fireworks(self.root)
+
+    def _ee_rainbow(self) -> None:
+        from lynx.easter import tk_rainbow_title
+        tk_rainbow_title(self.root)
+
+    def _ee_fortune(self) -> None:
+        from lynx.easter import FORTUNE_QUOTES
+        import random
+        quote = random.choice(FORTUNE_QUOTES)
+        messagebox.showinfo("\u2728 Fortune Cookie \u2728", quote)
+
+    # ---- Analysis -------------------------------------------------------
+
     def _run_analysis(self, identifier: str) -> None:
         try:
-            from lynx.core.analyzer import run_full_analysis
+            from lynx.core.analyzer import run_progressive_analysis
             from lynx.core.storage import is_testing
 
             refresh = self.var_refresh.get() or is_testing()
 
-            self.root.after(0, self.status_var.set, f"Fetching data for {identifier}...")
+            # Prepare the scroll area for progressive rendering
+            self.root.after(0, self._prepare_progressive)
 
-            report = run_full_analysis(
+            def on_progress(stage: str, report: AnalysisReport) -> None:
+                """Dispatch each stage to the UI thread."""
+                try:
+                    self.root.after(0, self._render_stage, stage, report)
+                except tk.TclError:
+                    pass  # Root destroyed
+
+            report = run_progressive_analysis(
                 identifier=identifier,
                 download_reports=not self.var_no_reports.get(),
                 download_news=not self.var_no_news.get(),
                 max_filings=getattr(self.cli_args, "max_filings", 10),
                 verbose=getattr(self.cli_args, "verbose", False),
                 refresh=refresh,
+                on_progress=on_progress,
             )
 
-            self.root.after(0, self._display_report, report)
+            self._current_report = report
+            try:
+                self.root.after(0, self._finalize_report, report)
+            except tk.TclError:
+                pass
 
         except Exception as e:
             msg = str(e) or type(e).__name__
             try:
-                self.root.after(
-                    0, lambda: (
-                        self.status_var.set(f"{WARN_ICON}  Error"),
-                        self.btn_analyze.configure(state=tk.NORMAL),
-                        self.btn_clear.configure(state=tk.NORMAL),
-                        messagebox.showerror("Analysis Error", msg),
-                    ),
-                )
+                self.root.after(0, self._show_analysis_error, msg)
             except tk.TclError:
                 pass  # Root window was destroyed
 
-    # ---- Display report --------------------------------------------------
-
-    def _display_report(self, report: AnalysisReport) -> None:
-        self._current_report = report
-        p = report.profile
-        self.status_var.set(
-            f"{CHECK}  {_s(p.name)} ({_s(p.ticker)})  {BULLET}  {_safe_tier(p.tier)}"
-        )
-        self.btn_analyze.configure(state=tk.NORMAL)
-        self.btn_clear.configure(state=tk.NORMAL)
-
-        # Clear
+    def _prepare_progressive(self) -> None:
+        """Clear the scroll area and prepare for progressive section mounting."""
         for child in self.scroll_frame.winfo_children():
             child.destroy()
         self._sections.clear()
+        self.status_var.set("Fetching data...")
 
-        # Tier banner
+    def _render_stage(self, stage: str, report: AnalysisReport) -> None:
+        """Render a single analysis stage into the scroll area."""
+        self._current_report = report
+        try:
+            if stage == "profile":
+                self._render_tier_banner(report)
+                self._render_profile(report)
+                self._render_sector_industry(report)
+                p = report.profile
+                self.status_var.set(
+                    f"Analyzing {_s(p.name)} ({_s(p.ticker)})..."
+                )
+            elif stage == "financials":
+                self._render_financials(report)
+            elif stage == "valuation":
+                self._render_valuation(report)
+            elif stage == "profitability":
+                self._render_profitability(report)
+            elif stage == "solvency":
+                self._render_solvency(report)
+            elif stage == "growth":
+                self._render_growth(report)
+            elif stage == "moat":
+                self._render_moat(report)
+            elif stage == "intrinsic_value":
+                self._render_intrinsic_value(report)
+            elif stage == "filings":
+                self._render_filings(report)
+            elif stage == "news":
+                self._render_news(report)
+            elif stage == "conclusion":
+                self._render_conclusion(report)
+            elif stage == "complete":
+                # If no sections rendered yet (cached report), render all now.
+                if not self._sections:
+                    self._render_all_sections(report)
+
+            # Update scroll region after each section
+            self.scroll_frame.update_idletasks()
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        except Exception:
+            pass  # Silently ignore render errors for individual sections
+
+    def _render_all_sections(self, report: AnalysisReport) -> None:
+        """Render all sections at once (used for cached reports)."""
         self._render_tier_banner(report)
-
-        # Sections
         self._render_profile(report)
+        self._render_sector_industry(report)
         self._render_valuation(report)
         self._render_profitability(report)
         self._render_solvency(report)
@@ -740,11 +1058,23 @@ class LynxFAGUI:
         self._render_financials(report)
         self._render_filings(report)
         self._render_news(report)
+        self._render_conclusion(report)
 
+    def _finalize_report(self, report: AnalysisReport) -> None:
+        """Called after the full analysis completes."""
+        self.status_var.set(f"{CHECK}  Analysis complete")
+        self.btn_analyze.configure(state=tk.NORMAL)
+        self.btn_clear.configure(state=tk.NORMAL)
         # Bottom padding
         tk.Frame(self.scroll_frame, bg=BG, height=24).pack(fill=tk.X)
+        self.scroll_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-        self.canvas.yview_moveto(0)
+    def _show_analysis_error(self, msg: str) -> None:
+        self.status_var.set(f"{WARN_ICON}  Error")
+        self.btn_analyze.configure(state=tk.NORMAL)
+        self.btn_clear.configure(state=tk.NORMAL)
+        messagebox.showerror("Analysis Error", msg)
 
     # ---- Tier banner -----------------------------------------------------
 
@@ -811,127 +1141,217 @@ class LynxFAGUI:
         p = r.profile
         card = CollapsibleCard(
             self.scroll_frame, "Company Profile",
-            icon=ICON_PROFILE, accent=ACCENT,
+            icon=ICON_PROFILE, accent=ACCENT, expanded=True,
+            info_command=lambda: self._show_section_info("profile"),
         )
         self._sections.append(card)
         frame = card.frame
 
-        rows = [
-            ("Company", _s(p.name)),
-            ("Ticker", _s(p.ticker)),
-            ("ISIN", _s(p.isin)),
-            ("Tier", _safe_tier(p.tier)),
-            ("Sector", _s(p.sector)),
-            ("Industry", _s(p.industry)),
-            ("Country", _s(p.country)),
-            ("Exchange", _s(p.exchange)),
-            ("Currency", _s(p.currency)),
-            ("Market Cap", _money(p.market_cap)),
-            ("Employees", f"{p.employees:,}" if p.employees else "N/A"),
+        # Split layout: metrics left (1/3), description right (2/3)
+        split = tk.Frame(frame, bg=BG_CARD)
+        split.pack(fill=tk.X)
+        split.columnconfigure(0, weight=1)
+        split.columnconfigure(1, weight=2)
+
+        # Left side: key-value metrics (1/3)
+        left = tk.Frame(split, bg=BG_CARD)
+        left.grid(row=0, column=0, sticky="nsew")
+
+        # (label, value, optional fg override)
+        rows: list[tuple[str, str, str]] = [
+            ("Company", _s(p.name), FG),
+            ("Ticker", _s(p.ticker), FG),
+            ("ISIN", _s(p.isin), FG),
+            ("Tier", _safe_tier(p.tier), FG),
+            ("Sector", _s(p.sector), FG),
+            ("Industry", _s(p.industry), FG),
+            ("Country", _s(p.country), FG),
+            ("Exchange", _s(p.exchange), FG),
+            ("Currency", _s(p.currency), YELLOW),
+            ("Market Cap", _money(p.market_cap), FG),
+            ("Employees", f"{p.employees:,}" if p.employees else "N/A", FG),
         ]
         if p.website:
-            rows.append(("Website", p.website))
+            rows.append(("Website", p.website, FG))
 
-        for i, (label, value) in enumerate(rows):
-            self._add_row(frame, i, label, value)
-
-        if p.description:
-            sep = tk.Frame(frame, bg=BORDER, height=1)
-            sep.pack(fill=tk.X, padx=12, pady=6)
+        for i, (label, value, fg_color) in enumerate(rows):
+            bg = BG_INPUT if i % 2 == 0 else BG_CARD
+            row = tk.Frame(left, bg=bg)
+            row.pack(fill=tk.X)
             tk.Label(
-                frame, text=p.description, font=FONT_SMALL,
-                bg=BG_CARD, fg=FG_DIM, wraplength=900,
-                justify=tk.LEFT, anchor=tk.NW, padx=16, pady=6,
-            ).pack(fill=tk.X)
+                row, text=label, font=FONT_BOLD, bg=bg, fg=ACCENT,
+                width=14, anchor=tk.E, pady=3,
+            ).pack(side=tk.LEFT, padx=(12, 6))
+            tk.Label(
+                row, text=value, font=FONT, bg=bg, fg=fg_color,
+                anchor=tk.W, pady=3,
+            ).pack(side=tk.LEFT, padx=(6, 12))
+
+        # Right side: business description (2/3)
+        right = tk.Frame(split, bg=BG_CARD, padx=12, pady=8)
+        right.grid(row=0, column=1, sticky="nsew")
+
+        # Vertical separator
+        tk.Frame(right, bg=BORDER, width=1).pack(side=tk.LEFT, fill=tk.Y, padx=(0, 12))
+
+        desc_area = tk.Frame(right, bg=BG_CARD)
+        desc_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        tk.Label(
+            desc_area, text="Business Description", font=FONT_SMALL_BOLD,
+            bg=BG_CARD, fg=ACCENT_DIM, anchor=tk.W,
+        ).pack(fill=tk.X, pady=(0, 6))
+
+        desc = p.description or "No description available."
+        tk.Label(
+            desc_area, text=desc, font=FONT,
+            bg=BG_CARD, fg=FG_DIM, wraplength=600,
+            justify=tk.LEFT, anchor=tk.NW,
+        ).pack(fill=tk.BOTH, expand=True)
+
+    # ---- Sector & Industry Insights ----------------------------------------
+
+    def _render_sector_industry(self, r: AnalysisReport) -> None:
+        from lynx.metrics.sector_insights import get_sector_insight, get_industry_insight
+
+        p = r.profile
+        items = []
+        if p.sector:
+            si = get_sector_insight(p.sector)
+            if si:
+                items.append((f"Sector: {si.sector}", si))
+        if p.industry:
+            ii = get_industry_insight(p.industry)
+            if ii:
+                items.append((f"Industry: {ii.industry}", ii))
+
+        for label, info in items:
+            card = CollapsibleCard(
+                self.scroll_frame, label,
+                icon="\U0001f4d6", accent=LAVENDER, expanded=False,
+            )
+            self._sections.append(card)
+            frame = card.frame
+            rows = [
+                ("Overview", info.overview),
+                ("Critical Metrics", ", ".join(info.critical_metrics)),
+                ("Key Risks", ", ".join(info.key_risks)),
+                ("What to Watch", ", ".join(info.what_to_watch)),
+                ("Typical Valuation", info.typical_valuation),
+            ]
+            for i, (lbl, value) in enumerate(rows):
+                bg = BG_INPUT if i % 2 == 0 else BG_CARD
+                row_frame = tk.Frame(frame, bg=bg)
+                row_frame.pack(fill=tk.X)
+                tk.Label(
+                    row_frame, text=lbl, font=FONT_BOLD, bg=bg, fg=ACCENT,
+                    width=22, anchor=tk.E, pady=3,
+                ).pack(side=tk.LEFT, padx=(12, 6))
+                tk.Label(
+                    row_frame, text=value, font=FONT, bg=bg, fg=FG,
+                    anchor=tk.W, pady=3, wraplength=700, justify=tk.LEFT,
+                ).pack(side=tk.LEFT, padx=(6, 12))
 
     # ---- Valuation -------------------------------------------------------
 
     def _render_valuation(self, r: AnalysisReport) -> None:
         v = r.valuation
+        if v is None:
+            return
         card = CollapsibleCard(
             self.scroll_frame, "Valuation",
-            icon=ICON_VALUATION, accent=YELLOW,
+            icon=ICON_VALUATION, accent=YELLOW, expanded=False,
+            info_command=lambda: self._show_section_info("valuation"),
         )
         self._sections.append(card)
         frame = card.frame
         rows = [
-            ("P/E (Trailing)", _num(v.pe_trailing), _ape(v.pe_trailing)),
-            ("P/E (Forward)", _num(v.pe_forward), _ape(v.pe_forward)),
-            ("P/B Ratio", _num(v.pb_ratio), _thr(v.pb_ratio, [(1, "Below Book"), (1.5, "Cheap"), (3, "Fair")], "Premium")),
-            ("P/S Ratio", _num(v.ps_ratio), ""),
-            ("P/FCF", _num(v.p_fcf), _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive")),
-            ("EV/EBITDA", _num(v.ev_ebitda), _thr(v.ev_ebitda, [(8, "Cheap"), (12, "Fair"), (18, "Expensive")], "Very Expensive")),
-            ("EV/Revenue", _num(v.ev_revenue), _thr(v.ev_revenue, [(1, "Very cheap"), (3, "Cheap"), (5, "Fair"), (8, "Expensive")], "Very expensive")),
-            ("PEG Ratio", _num(v.peg_ratio), _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued")),
-            ("Earnings Yield", _pct(v.earnings_yield), _thr(v.earnings_yield, [(0, "Negative"), (0.05, "Low"), (0.07, "Fair"), (0.10, "Good")], "Excellent")),
-            ("Dividend Yield", _pct(v.dividend_yield), _thr(v.dividend_yield, [(0, "No dividend"), (0.02, "Low"), (0.04, "Moderate"), (0.06, "High")], "Very high")),
-            ("P/Tangible Book", _num(v.price_to_tangible_book), _thr(v.price_to_tangible_book, [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")], "Premium")),
-            ("P/NCAV (Net-Net)", _num(v.price_to_ncav), _thr(v.price_to_ncav, [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")], "Above NCAV")),
-            ("Enterprise Value", _money(v.enterprise_value), ""),
-            ("Market Cap", _money(v.market_cap), ""),
+            ("P/E (Trailing)", _num(v.pe_trailing), _ape(v.pe_trailing), "pe_trailing"),
+            ("P/E (Forward)", _num(v.pe_forward), _ape(v.pe_forward), "pe_forward"),
+            ("P/B Ratio", _num(v.pb_ratio), _thr(v.pb_ratio, [(1, "Below Book"), (1.5, "Cheap"), (3, "Fair")], "Premium"), "pb_ratio"),
+            ("P/S Ratio", _num(v.ps_ratio), "", "ps_ratio"),
+            ("P/FCF", _num(v.p_fcf), _thr(v.p_fcf, [(10, "Cheap"), (20, "Fair")], "Expensive"), "p_fcf"),
+            ("EV/EBITDA", _num(v.ev_ebitda), _thr(v.ev_ebitda, [(8, "Cheap"), (12, "Fair"), (18, "Expensive")], "Very Expensive"), "ev_ebitda"),
+            ("EV/Revenue", _num(v.ev_revenue), _thr(v.ev_revenue, [(1, "Very cheap"), (3, "Cheap"), (5, "Fair"), (8, "Expensive")], "Very expensive"), "ev_revenue"),
+            ("PEG Ratio", _num(v.peg_ratio), _thr(v.peg_ratio, [(1, "Undervalued"), (2, "Fair")], "Overvalued"), "peg_ratio"),
+            ("Earnings Yield", _pct(v.earnings_yield), _thr(v.earnings_yield, [(0, "Negative"), (0.05, "Low"), (0.07, "Fair"), (0.10, "Good")], "Excellent"), "earnings_yield"),
+            ("Dividend Yield", _pct(v.dividend_yield), _thr(v.dividend_yield, [(0, "No dividend"), (0.02, "Low"), (0.04, "Moderate"), (0.06, "High")], "Very high"), "dividend_yield"),
+            ("P/Tangible Book", _num(v.price_to_tangible_book), _thr(v.price_to_tangible_book, [(0.67, "Deep Value"), (1, "Below Book"), (1.5, "Near Book")], "Premium"), "price_to_tangible_book"),
+            ("P/NCAV (Net-Net)", _num(v.price_to_ncav), _thr(v.price_to_ncav, [(0.67, "Classic Net-Net"), (1, "Below NCAV"), (1.5, "Near NCAV")], "Above NCAV"), "price_to_ncav"),
+            ("Enterprise Value", _money(v.enterprise_value), "", ""),
+            ("Market Cap", _money(v.market_cap), "", ""),
         ]
-        for i, (label, value, assessment) in enumerate(rows):
-            self._add_metric_row(frame, i, label, value, assessment)
+        for i, (label, value, assessment, key) in enumerate(rows):
+            self._add_metric_row(frame, i, label, value, assessment, metric_key=key)
 
     # ---- Profitability ---------------------------------------------------
 
     def _render_profitability(self, r: AnalysisReport) -> None:
         p = r.profitability
+        if p is None:
+            return
         card = CollapsibleCard(
             self.scroll_frame, "Profitability",
-            icon=ICON_PROFIT, accent=GREEN,
+            icon=ICON_PROFIT, accent=GREEN, expanded=False,
+            info_command=lambda: self._show_section_info("profitability"),
         )
         self._sections.append(card)
         frame = card.frame
         rows = [
-            ("ROE", _pct(p.roe), _thr(p.roe, [(0, "Negative"), (0.10, "Below Avg"), (0.15, "Good"), (0.20, "Excellent")], "Outstanding")),
-            ("ROA", _pct(p.roa), _thr(p.roa, [(0, "Negative"), (0.05, "Low"), (0.10, "Good")], "Excellent")),
-            ("ROIC", _pct(p.roic), _thr(p.roic, [(0, "Negative"), (0.07, "Below WACC"), (0.10, "Good"), (0.15, "Wide Moat")], "Exceptional")),
-            ("Gross Margin", _pct(p.gross_margin), _thr(p.gross_margin, [(0, "Negative"), (0.20, "Thin"), (0.40, "Good"), (0.60, "Strong")], "Very strong")),
-            ("Operating Margin", _pct(p.operating_margin), _thr(p.operating_margin, [(0, "Loss"), (0.05, "Thin"), (0.15, "Good"), (0.25, "Excellent")], "Outstanding")),
-            ("Net Margin", _pct(p.net_margin), _thr(p.net_margin, [(0, "Loss"), (0.05, "Thin"), (0.10, "Good"), (0.20, "Excellent")], "Outstanding")),
-            ("FCF Margin", _pct(p.fcf_margin), _thr(p.fcf_margin, [(0, "Negative"), (0.05, "Weak"), (0.10, "Good"), (0.20, "Strong")], "Excellent")),
-            ("EBITDA Margin", _pct(p.ebitda_margin), _thr(p.ebitda_margin, [(0, "Negative"), (0.05, "Thin"), (0.15, "Good"), (0.30, "Excellent")], "Outstanding")),
+            ("ROE", _pct(p.roe), _thr(p.roe, [(0, "Negative"), (0.10, "Below Avg"), (0.15, "Good"), (0.20, "Excellent")], "Outstanding"), "roe"),
+            ("ROA", _pct(p.roa), _thr(p.roa, [(0, "Negative"), (0.05, "Low"), (0.10, "Good")], "Excellent"), "roa"),
+            ("ROIC", _pct(p.roic), _thr(p.roic, [(0, "Negative"), (0.07, "Below WACC"), (0.10, "Good"), (0.15, "Wide Moat")], "Exceptional"), "roic"),
+            ("Gross Margin", _pct(p.gross_margin), _thr(p.gross_margin, [(0, "Negative"), (0.20, "Thin"), (0.40, "Good"), (0.60, "Strong")], "Very strong"), "gross_margin"),
+            ("Operating Margin", _pct(p.operating_margin), _thr(p.operating_margin, [(0, "Loss"), (0.05, "Thin"), (0.15, "Good"), (0.25, "Excellent")], "Outstanding"), "operating_margin"),
+            ("Net Margin", _pct(p.net_margin), _thr(p.net_margin, [(0, "Loss"), (0.05, "Thin"), (0.10, "Good"), (0.20, "Excellent")], "Outstanding"), "net_margin"),
+            ("FCF Margin", _pct(p.fcf_margin), _thr(p.fcf_margin, [(0, "Negative"), (0.05, "Weak"), (0.10, "Good"), (0.20, "Strong")], "Excellent"), "fcf_margin"),
+            ("EBITDA Margin", _pct(p.ebitda_margin), _thr(p.ebitda_margin, [(0, "Negative"), (0.05, "Thin"), (0.15, "Good"), (0.30, "Excellent")], "Outstanding"), "ebitda_margin"),
         ]
-        for i, (label, value, assessment) in enumerate(rows):
-            self._add_metric_row(frame, i, label, value, assessment)
+        for i, (label, value, assessment, key) in enumerate(rows):
+            self._add_metric_row(frame, i, label, value, assessment, metric_key=key)
 
     # ---- Solvency --------------------------------------------------------
 
     def _render_solvency(self, r: AnalysisReport) -> None:
         s = r.solvency
+        if s is None:
+            return
         card = CollapsibleCard(
             self.scroll_frame, "Solvency & Financial Health",
-            icon=ICON_SOLVENCY, accent=RED,
+            icon=ICON_SOLVENCY, accent=RED, expanded=False,
+            info_command=lambda: self._show_section_info("solvency"),
         )
         self._sections.append(card)
         frame = card.frame
         rows = [
-            ("Debt/Equity", _num(s.debt_to_equity), _thr(s.debt_to_equity, [(0.3, "Very Conservative"), (0.5, "Conservative"), (1.0, "Moderate"), (2.0, "High")], "Very High")),
-            ("Debt/EBITDA", _num(s.debt_to_ebitda), _thr(s.debt_to_ebitda, [(1, "Very Low"), (2, "Manageable"), (3, "Moderate")], "Heavy")),
-            ("Current Ratio", _num(s.current_ratio), _thr(s.current_ratio, [(1.0, "Liquidity Risk"), (1.5, "Adequate"), (2.0, "Good")], "Strong")),
-            ("Quick Ratio", _num(s.quick_ratio), ""),
-            ("Interest Coverage", _num(s.interest_coverage, 1), _thr(s.interest_coverage, [(1, "Cannot cover"), (2, "Tight"), (4, "Adequate"), (8, "Strong")], "Very strong")),
-            ("Altman Z-Score", _num(s.altman_z_score), _thr(s.altman_z_score, [(1.81, "Distress"), (2.99, "Grey Zone")], "Safe")),
-            ("Cash Burn Rate (/yr)", _money(s.cash_burn_rate), _burn(s.cash_burn_rate)),
-            ("Cash Runway", f"{s.cash_runway_years:.1f} yrs" if s.cash_runway_years is not None else "N/A", ""),
-            ("Working Capital", _money(s.working_capital), ""),
-            ("Cash Per Share", f"${s.cash_per_share:.2f}" if s.cash_per_share is not None else "N/A", ""),
-            ("NCAV Per Share", f"${s.ncav_per_share:.4f}" if s.ncav_per_share is not None else "N/A", ""),
-            ("Total Debt", _money(s.total_debt), ""),
-            ("Total Cash", _money(s.total_cash), ""),
-            ("Net Debt", _money(s.net_debt), ""),
+            ("Debt/Equity", _num(s.debt_to_equity), _thr(s.debt_to_equity, [(0.3, "Very Conservative"), (0.5, "Conservative"), (1.0, "Moderate"), (2.0, "High")], "Very High"), "debt_to_equity"),
+            ("Debt/EBITDA", _num(s.debt_to_ebitda), _thr(s.debt_to_ebitda, [(1, "Very Low"), (2, "Manageable"), (3, "Moderate")], "Heavy"), "debt_to_ebitda"),
+            ("Current Ratio", _num(s.current_ratio), _thr(s.current_ratio, [(1.0, "Liquidity Risk"), (1.5, "Adequate"), (2.0, "Good")], "Strong"), "current_ratio"),
+            ("Quick Ratio", _num(s.quick_ratio), "", "quick_ratio"),
+            ("Interest Coverage", _num(s.interest_coverage, 1), _thr(s.interest_coverage, [(1, "Cannot cover"), (2, "Tight"), (4, "Adequate"), (8, "Strong")], "Very strong"), "interest_coverage"),
+            ("Altman Z-Score", _num(s.altman_z_score), _thr(s.altman_z_score, [(1.81, "Distress"), (2.99, "Grey Zone")], "Safe"), "altman_z_score"),
+            ("Cash Burn Rate (/yr)", _money(s.cash_burn_rate), _burn(s.cash_burn_rate), "cash_burn_rate"),
+            ("Cash Runway", f"{s.cash_runway_years:.1f} yrs" if s.cash_runway_years is not None else "N/A", "", "cash_runway_years"),
+            ("Working Capital", _money(s.working_capital), "", ""),
+            ("Cash Per Share", f"${s.cash_per_share:.2f}" if s.cash_per_share is not None else "N/A", "", ""),
+            ("NCAV Per Share", f"${s.ncav_per_share:.4f}" if s.ncav_per_share is not None else "N/A", "", "ncav_per_share"),
+            ("Total Debt", _money(s.total_debt), "", ""),
+            ("Total Cash", _money(s.total_cash), "", ""),
+            ("Net Debt", _money(s.net_debt), "", ""),
         ]
-        for i, (label, value, assessment) in enumerate(rows):
-            self._add_metric_row(frame, i, label, value, assessment)
+        for i, (label, value, assessment, key) in enumerate(rows):
+            self._add_metric_row(frame, i, label, value, assessment, metric_key=key)
 
     # ---- Growth ----------------------------------------------------------
 
     def _render_growth(self, r: AnalysisReport) -> None:
         g = r.growth
+        if g is None:
+            return
         card = CollapsibleCard(
             self.scroll_frame, "Growth",
-            icon=ICON_GROWTH, accent=MAUVE,
+            icon=ICON_GROWTH, accent=MAUVE, expanded=False,
+            info_command=lambda: self._show_section_info("growth"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -952,27 +1372,30 @@ class LynxFAGUI:
             except Exception: return ""
 
         rows = [
-            ("Revenue Growth (YoY)", _pct(g.revenue_growth_yoy), _ga(g.revenue_growth_yoy)),
-            ("Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y), _ca(g.revenue_cagr_3y)),
-            ("Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y), _ca(g.revenue_cagr_5y)),
-            ("Earnings Growth (YoY)", _pct(g.earnings_growth_yoy), _ga(g.earnings_growth_yoy)),
-            ("Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y), _ca(g.earnings_cagr_3y)),
-            ("Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y), _ca(g.earnings_cagr_5y)),
-            ("FCF Growth (YoY)", _pct(g.fcf_growth_yoy), _ga(g.fcf_growth_yoy)),
-            ("Book Value Growth (YoY)", _pct(g.book_value_growth_yoy), _ga(g.book_value_growth_yoy)),
-            ("Share Dilution (YoY)", _pct(g.shares_growth_yoy), _da(g.shares_growth_yoy)),
+            ("Revenue Growth (YoY)", _pct(g.revenue_growth_yoy), _ga(g.revenue_growth_yoy), "revenue_growth_yoy"),
+            ("Revenue CAGR (3Y)", _pct(g.revenue_cagr_3y), _ca(g.revenue_cagr_3y), "revenue_cagr_3y"),
+            ("Revenue CAGR (5Y)", _pct(g.revenue_cagr_5y), _ca(g.revenue_cagr_5y), "revenue_cagr_5y"),
+            ("Earnings Growth (YoY)", _pct(g.earnings_growth_yoy), _ga(g.earnings_growth_yoy), "earnings_growth_yoy"),
+            ("Earnings CAGR (3Y)", _pct(g.earnings_cagr_3y), _ca(g.earnings_cagr_3y), "earnings_cagr_3y"),
+            ("Earnings CAGR (5Y)", _pct(g.earnings_cagr_5y), _ca(g.earnings_cagr_5y), "earnings_cagr_5y"),
+            ("FCF Growth (YoY)", _pct(g.fcf_growth_yoy), _ga(g.fcf_growth_yoy), ""),
+            ("Book Value Growth (YoY)", _pct(g.book_value_growth_yoy), _ga(g.book_value_growth_yoy), ""),
+            ("Share Dilution (YoY)", _pct(g.shares_growth_yoy), _da(g.shares_growth_yoy), "shares_growth_yoy"),
         ]
-        for i, (label, value, assessment) in enumerate(rows):
-            self._add_metric_row(frame, i, label, value, assessment)
+        for i, (label, value, assessment, key) in enumerate(rows):
+            self._add_metric_row(frame, i, label, value, assessment, metric_key=key)
 
     # ---- Moat ------------------------------------------------------------
 
     def _render_moat(self, r: AnalysisReport) -> None:
         m = r.moat
+        if m is None:
+            return
         tier = _get_tier(r)
         card = CollapsibleCard(
             self.scroll_frame, "Moat Indicators",
-            icon=ICON_MOAT, accent=YELLOW,
+            icon=ICON_MOAT, accent=YELLOW, expanded=False,
+            info_command=lambda: self._show_section_info("moat"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -991,10 +1414,10 @@ class LynxFAGUI:
                 ("Margin Stability", _s(m.margin_stability)),
                 ("Revenue Predictability", _s(m.revenue_predictability)),
                 ("Scale", _s(m.efficient_scale)),
-                ("Switching Costs", _s(m.switching_costs) or "Review needed"),
-                ("Network Effects", _s(m.network_effects) or "Review needed"),
-                ("Cost Advantages", _s(m.cost_advantages) or "Not detected"),
-                ("Intangible Assets", _s(m.intangible_assets) or "Not detected"),
+                ("Switching Costs", _s(m.switching_costs or "Review needed")),
+                ("Network Effects", _s(m.network_effects or "Review needed")),
+                ("Cost Advantages", _s(m.cost_advantages or "Not detected")),
+                ("Intangible Assets", _s(m.intangible_assets or "Not detected")),
             ]
         else:
             rows += [
@@ -1067,9 +1490,12 @@ class LynxFAGUI:
 
     def _render_intrinsic_value(self, r: AnalysisReport) -> None:
         iv = r.intrinsic_value
+        if iv is None:
+            return
         card = CollapsibleCard(
             self.scroll_frame, "Intrinsic Value",
-            icon=ICON_VALUE, accent=TEAL,
+            icon=ICON_VALUE, accent=TEAL, expanded=False,
+            info_command=lambda: self._show_section_info("intrinsic_value"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -1097,6 +1523,87 @@ class LynxFAGUI:
         for i, (label, value, assessment) in enumerate(rows):
             self._add_metric_row(frame, i, label, value, assessment)
 
+    # ---- Conclusion -----------------------------------------------------
+
+    def _render_conclusion(self, r: AnalysisReport) -> None:
+        from lynx.core.conclusion import generate_conclusion
+        c = generate_conclusion(r)
+
+        # Verdict colour
+        verdict_colors = {
+            "Strong Buy": GREEN, "Buy": GREEN_DIM,
+            "Hold": YELLOW, "Caution": ORANGE, "Avoid": RED,
+        }
+        vc = verdict_colors.get(c.verdict, FG)
+
+        card = CollapsibleCard(
+            self.scroll_frame, "Assessment Conclusion",
+            icon="\U0001f4dd", accent=vc, expanded=False,
+            info_command=lambda: self._show_conclusion_info("overall"),
+        )
+        self._sections.append(card)
+        frame = card.frame
+
+        # Verdict + score bar
+        verdict_frame = tk.Frame(frame, bg=BG_CARD, pady=8, padx=16)
+        verdict_frame.pack(fill=tk.X)
+        tk.Label(
+            verdict_frame, text=f"{c.verdict}  ({c.overall_score:.0f}/100)",
+            font=(_FAMILY, 14, "bold"), bg=BG_CARD, fg=vc,
+        ).pack(anchor=tk.W)
+        tk.Label(
+            verdict_frame, text=c.summary, font=FONT_SMALL,
+            bg=BG_CARD, fg=FG_DIM, wraplength=900, justify=tk.LEFT,
+        ).pack(anchor=tk.W, pady=(4, 0))
+
+        # Category scores
+        sep = tk.Frame(frame, bg=BORDER, height=1)
+        sep.pack(fill=tk.X, padx=12, pady=6)
+        for i, cat in enumerate(("valuation", "profitability", "solvency", "growth", "moat")):
+            score = c.category_scores.get(cat, 0)
+            summary = c.category_summaries.get(cat, "")
+            self._add_metric_row(frame, i, cat.title(), f"{score:.0f}/100", summary)
+
+        # Strengths & risks
+        if c.strengths or c.risks:
+            sep2 = tk.Frame(frame, bg=BORDER, height=1)
+            sep2.pack(fill=tk.X, padx=12, pady=6)
+            idx = 0
+            for s in c.strengths:
+                bg = BG_INPUT if idx % 2 == 0 else BG_CARD
+                row = tk.Frame(frame, bg=bg)
+                row.pack(fill=tk.X)
+                tk.Label(
+                    row, text=f"{CHECK} Strength", font=FONT_BOLD, bg=bg, fg=GREEN,
+                    width=22, anchor=tk.E, pady=3,
+                ).pack(side=tk.LEFT, padx=(12, 6))
+                tk.Label(
+                    row, text=s, font=FONT, bg=bg, fg=FG,
+                    anchor=tk.W, pady=3,
+                ).pack(side=tk.LEFT, padx=(6, 12))
+                idx += 1
+            for risk in c.risks:
+                bg = BG_INPUT if idx % 2 == 0 else BG_CARD
+                row = tk.Frame(frame, bg=bg)
+                row.pack(fill=tk.X)
+                tk.Label(
+                    row, text=f"{WARN_ICON} Risk", font=FONT_BOLD, bg=bg, fg=RED,
+                    width=22, anchor=tk.E, pady=3,
+                ).pack(side=tk.LEFT, padx=(12, 6))
+                tk.Label(
+                    row, text=risk, font=FONT, bg=bg, fg=FG,
+                    anchor=tk.W, pady=3,
+                ).pack(side=tk.LEFT, padx=(6, 12))
+                idx += 1
+
+        # Tier note
+        if c.tier_note:
+            tk.Label(
+                frame, text=c.tier_note, font=FONT_SMALL,
+                bg=BG_CARD, fg=FG_SUBTLE, wraplength=900,
+                justify=tk.LEFT, anchor=tk.NW, padx=16, pady=6,
+            ).pack(fill=tk.X)
+
     # ---- Financials ------------------------------------------------------
 
     def _render_financials(self, r: AnalysisReport) -> None:
@@ -1104,7 +1611,8 @@ class LynxFAGUI:
             return
         card = CollapsibleCard(
             self.scroll_frame, f"Financial Statements ({len(r.financials[:5])}Y)",
-            icon=ICON_FINANCE, accent=SKY,
+            icon=ICON_FINANCE, accent=SKY, expanded=False,
+            info_command=lambda: self._show_section_info("financials"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -1123,15 +1631,30 @@ class LynxFAGUI:
             bg = BG_INPUT if i % 2 == 0 else BG_CARD
             row = tk.Frame(frame, bg=bg)
             row.pack(fill=tk.X)
-            vals = [
-                _s(st.period), _money(st.revenue), _money(st.gross_profit),
-                _money(st.operating_income), _money(st.net_income),
-                _money(st.free_cash_flow), _money(st.total_equity),
-                _money(st.total_debt),
+            # (value_text, raw_number) — raw used for red/green coloring
+            cells = [
+                (_s(st.period), None),
+                (_money(st.revenue), st.revenue),
+                (_money(st.gross_profit), st.gross_profit),
+                (_money(st.operating_income), st.operating_income),
+                (_money(st.net_income), st.net_income),
+                (_money(st.free_cash_flow), st.free_cash_flow),
+                (_money(st.total_equity), st.total_equity),
+                (_money(st.total_debt), None),  # debt is not P&L
             ]
-            for val in vals:
+            for val_text, raw in cells:
+                fg_color = FG
+                if raw is not None:
+                    try:
+                        v = float(raw)
+                        if v > 0:
+                            fg_color = GREEN
+                        elif v < 0:
+                            fg_color = RED
+                    except (TypeError, ValueError):
+                        pass
                 tk.Label(
-                    row, text=val, font=FONT_SMALL, bg=bg, fg=FG,
+                    row, text=val_text, font=FONT_SMALL, bg=bg, fg=fg_color,
                     width=14, anchor=tk.CENTER, pady=3,
                 ).pack(side=tk.LEFT, padx=1)
 
@@ -1142,7 +1665,8 @@ class LynxFAGUI:
             return
         card = CollapsibleCard(
             self.scroll_frame, f"SEC Filings ({len(r.filings)})",
-            icon=ICON_FILING, accent=PEACH,
+            icon=ICON_FILING, accent=PEACH, expanded=False,
+            info_command=lambda: self._show_section_info("filings"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -1191,7 +1715,8 @@ class LynxFAGUI:
             return
         card = CollapsibleCard(
             self.scroll_frame, f"News ({len(r.news)})",
-            icon=ICON_NEWS, accent=PINK,
+            icon=ICON_NEWS, accent=PINK, expanded=False,
+            info_command=lambda: self._show_section_info("news"),
         )
         self._sections.append(card)
         frame = card.frame
@@ -1233,13 +1758,14 @@ class LynxFAGUI:
     # ---- Filing download / News open --------------------------------------
 
     def _download_filing_gui(self, filing) -> None:
-        if not self._current_report:
+        report = self._current_report
+        if not report:
             return
 
         def _do():
             from lynx.core.reports import download_filing
             try:
-                path = download_filing(self._current_report.profile.ticker, filing)
+                path = download_filing(report.profile.ticker, filing)
                 if path:
                     self.root.after(0, lambda: messagebox.showinfo(
                         "Download Complete",
@@ -1295,8 +1821,9 @@ class LynxFAGUI:
         ).pack(side=tk.LEFT, padx=(6, 12))
 
     def _add_metric_row(self, frame: tk.Frame, idx: int,
-                        label: str, value: str, assessment: str) -> None:
-        """Add a metric row with label, value, and assessment badge."""
+                        label: str, value: str, assessment: str,
+                        metric_key: str = "") -> None:
+        """Add a metric row with label, value, assessment badge, and info button."""
         bg = BG_INPUT if idx % 2 == 0 else BG_CARD
         r = tk.Frame(frame, bg=bg)
         r.pack(fill=tk.X)
@@ -1314,6 +1841,107 @@ class LynxFAGUI:
                 r, text=f" {assessment} ", font=FONT_SMALL,
                 bg=bg, fg=fg_color, anchor=tk.W, pady=3,
             ).pack(side=tk.LEFT, padx=(4, 8))
+        # Metric explanation "?" button
+        if metric_key:
+            btn = tk.Button(
+                r, text=" ? ", font=(_FAMILY, 9, "bold"),
+                bg=BORDER, fg=ACCENT, activebackground=BG_HOVER,
+                activeforeground=FG, relief=tk.FLAT, padx=2, pady=0,
+                cursor="hand2",
+                command=lambda k=metric_key: self._show_metric_info(k),
+            )
+            btn.pack(side=tk.RIGHT, padx=(0, 8))
+
+    # ---- Explanation popups ------------------------------------------------
+
+    def _show_info_popup(self, title: str, subtitle: str, sections: list) -> None:
+        """Generic info popup with title, subtitle, and content sections."""
+        win = tk.Toplevel(self.root)
+        win.title(title)
+        win.configure(bg=BG)
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        tk.Label(
+            win, text=title, font=(_FAMILY, 14, "bold"),
+            bg=BG, fg=ACCENT, wraplength=560,
+        ).pack(padx=24, pady=(16, 4))
+
+        if subtitle:
+            tk.Label(
+                win, text=subtitle, font=FONT_SMALL,
+                bg=BG, fg=FG_SUBTLE,
+            ).pack(padx=24, pady=(0, 12))
+
+        card = tk.Frame(win, bg=BG_CARD, padx=16, pady=12)
+        card.pack(fill=tk.X, padx=20, pady=(0, 8))
+
+        for i, (heading, text) in enumerate(sections):
+            if i > 0:
+                tk.Frame(card, bg=BORDER, height=1).pack(fill=tk.X, pady=8)
+            tk.Label(
+                card, text=heading, font=FONT_SMALL_BOLD,
+                bg=BG_CARD, fg=ACCENT, anchor=tk.W,
+            ).pack(fill=tk.X)
+            tk.Label(
+                card, text=text, font=FONT, bg=BG_CARD, fg=FG,
+                wraplength=520, justify=tk.LEFT, anchor=tk.NW,
+            ).pack(fill=tk.X, pady=(2, 0))
+
+        btn_frame = tk.Frame(win, bg=BG)
+        btn_frame.pack(fill=tk.X, pady=(8, 16))
+        tk.Button(
+            btn_frame, text="  Close  ", font=FONT_BTN,
+            bg=BTN_BG, fg=BTN_FG, activebackground=BTN_ACTIVE,
+            relief=tk.FLAT, padx=14, pady=4, cursor="hand2",
+            command=win.destroy,
+        ).pack(anchor=tk.CENTER)
+
+        win.bind("<Escape>", lambda _: win.destroy())
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{sx}+{sy}")
+
+    def _show_metric_info(self, key: str) -> None:
+        from lynx.metrics.explanations import get_explanation
+        exp = get_explanation(key)
+        if not exp:
+            return
+        self._show_info_popup(
+            exp.full_name,
+            f"Category: {exp.category.title()}",
+            [
+                ("What it measures", exp.description),
+                ("Formula", exp.formula),
+                ("Why it matters", exp.why_used),
+            ],
+        )
+
+    def _show_section_info(self, section_key: str) -> None:
+        from lynx.metrics.explanations import get_section_explanation
+        sec = get_section_explanation(section_key)
+        if not sec:
+            return
+        self._show_info_popup(
+            sec["title"],
+            "",
+            [("Description", sec["description"])],
+        )
+
+    def _show_conclusion_info(self, category: str = "overall") -> None:
+        from lynx.metrics.explanations import get_conclusion_explanation
+        ce = get_conclusion_explanation(category)
+        if not ce:
+            return
+        self._show_info_popup(
+            ce["title"],
+            "Conclusion Methodology",
+            [("How it works", ce["description"])],
+        )
+
 
     # ---- Run -------------------------------------------------------------
 
@@ -1335,7 +1963,9 @@ def _num(val, digits: int = 2) -> str:
     if val is None:
         return "N/A"
     try:
-        return f"{float(val):,.{digits}f}"
+        v = float(val)
+        if v != v: return "N/A"  # NaN check
+        return f"{v:,.{digits}f}"
     except Exception:
         return "N/A"
 
@@ -1344,7 +1974,9 @@ def _pct(val) -> str:
     if val is None:
         return "N/A"
     try:
-        return f"{float(val) * 100:.2f}%"
+        v = float(val)
+        if v != v: return "N/A"  # NaN check
+        return f"{v * 100:.2f}%"
     except Exception:
         return "N/A"
 
@@ -1353,7 +1985,9 @@ def _pctplain(val) -> str:
     if val is None:
         return "N/A"
     try:
-        return f"{float(val) * 100:.1f}%"
+        v = float(val)
+        if v != v: return "N/A"  # NaN check
+        return f"{v * 100:.1f}%"
     except Exception:
         return "N/A"
 
@@ -1363,6 +1997,7 @@ def _money(val) -> str:
         return "N/A"
     try:
         v = float(val)
+        if v != v: return "N/A"  # NaN check
         if abs(v) >= 1e12:
             return f"${v / 1e12:,.2f}T"
         if abs(v) >= 1e9:

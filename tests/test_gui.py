@@ -117,3 +117,88 @@ class TestGetTier:
             intrinsic_value=IntrinsicValue(),
         )
         assert _get_tier(r) == CompanyTier.NANO
+
+
+class TestNaNHandling:
+    def test_num_nan(self):
+        assert _num(float("nan")) == "N/A"
+
+    def test_pct_nan(self):
+        assert _pct(float("nan")) == "N/A"
+
+    def test_pctplain_nan(self):
+        assert _pctplain(float("nan")) == "N/A"
+
+    def test_money_nan(self):
+        assert _money(float("nan")) == "N/A"
+
+
+class TestCollapsibleCard:
+    def test_expanded_parameter_exists(self):
+        from lynx.gui.app import CollapsibleCard
+        import inspect
+        sig = inspect.signature(CollapsibleCard.__init__)
+        assert "expanded" in sig.parameters
+
+    def test_expanded_default_is_true(self):
+        from lynx.gui.app import CollapsibleCard
+        import inspect
+        sig = inspect.signature(CollapsibleCard.__init__)
+        assert sig.parameters["expanded"].default is True
+
+
+class TestLogoImages:
+    def test_logo_sm_green_exists(self):
+        from pathlib import Path
+        logo = Path(__file__).resolve().parent.parent / "img" / "logo_sm_green.png"
+        assert logo.exists(), f"Missing logo: {logo}"
+
+    def test_logo_sm_quarter_green_exists(self):
+        from pathlib import Path
+        logo = Path(__file__).resolve().parent.parent / "img" / "logo_sm_quarter_green.png"
+        assert logo.exists(), f"Missing logo: {logo}"
+
+    def test_logo_path_from_gui_module(self):
+        """Verify the path resolution used in gui/app.py works."""
+        from pathlib import Path
+        import lynx.gui.app as gui_mod
+        gui_file = Path(gui_mod.__file__).resolve()
+        logo = gui_file.parent.parent.parent / "img" / "logo_sm_quarter_green.png"
+        assert logo.exists(), f"GUI logo path resolution failed: {logo}"
+
+
+class TestGuiHasRenderConclusion:
+    def test_render_conclusion_exists(self):
+        from lynx.gui.app import LynxFAGUI
+        assert hasattr(LynxFAGUI, "_render_conclusion")
+
+    def test_render_conclusion_callable(self):
+        from lynx.gui.app import LynxFAGUI
+        assert callable(getattr(LynxFAGUI, "_render_conclusion"))
+
+
+class TestMetricInfo:
+    def test_show_metric_info_method_exists(self):
+        from lynx.gui.app import LynxFAGUI
+        assert hasattr(LynxFAGUI, "_show_metric_info")
+
+    def test_add_metric_row_has_key_param(self):
+        from lynx.gui.app import LynxFAGUI
+        import inspect
+        sig = inspect.signature(LynxFAGUI._add_metric_row)
+        assert "metric_key" in sig.parameters
+
+
+class TestRunScript:
+    def test_entry_point_exists(self):
+        from pathlib import Path
+        entry = Path(__file__).resolve().parent.parent / "lynx-fundamental.py"
+        assert entry.exists()
+
+    def test_entry_point_executable(self):
+        import os
+        from pathlib import Path
+        entry = Path(__file__).resolve().parent.parent / "lynx-fundamental.py"
+        assert os.access(entry, os.X_OK)
+
+

@@ -1,59 +1,61 @@
-"""Interactive prompt-based mode for Lynx FA."""
+"""Interactive prompt-based mode for lynx-fundamental."""
 
 from __future__ import annotations
 
+try:
+    import readline as _readline  # noqa: F401 — enables arrow-key history
+except ImportError:
+    pass  # readline unavailable on Windows; arrow keys won't navigate history
+
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, IntPrompt
+from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
-from lynx.core.analyzer import run_full_analysis
+from lynx.core.analyzer import run_progressive_analysis
 from lynx.core.news import download_article
 from lynx.core.reports import download_filing
-from lynx.display import display_full_report
+from lynx.display import display_full_report, display_report_stage
 from lynx.models import AnalysisReport
 
 console = Console()
 
 BANNER = """
-[bold blue]
-  ╦  ╦ ╔╗╔ ╦ ╦  ═╗═╗
-  ║  ╚╦╝║║║  ╠╣  ╠╣╠╣
-  ╩═╝ ╩ ╝╚╝ ╩ ╩ ╩ ╩ ╩
-[/]
-[bold]Fundamental Analysis Tool[/]
-[dim]Value Investing & Moat Analysis[/]
+[bold blue]  L Y N X   Fundamental Analysis[/]
+[dim]    Value Investing & Moat Analysis[/]
 """
 
 MENU = """
 [bold cyan]Analysis:[/]
-  [bold]analyze[/] <TICKER|ISIN|NAME>  Analyze (uses cache in production mode)
-  [bold]refresh[/] <TICKER|ISIN|NAME>  Force fresh data download
-  [bold]search[/] <query>              Search for a company
+  [bold]analyze[/] <TICKER|ISIN|NAME>   Analyze (uses cache in production mode)
+  [bold]refresh[/] <TICKER|ISIN|NAME>   Force fresh data download
+  [bold]search[/] <query>               Search for a company
 
 [bold cyan]View data:[/]
-  [bold]metrics[/]                     Show last analysis metrics
-  [bold]filings[/]                     List SEC filings
-  [bold]download-filing[/] <N>         Download filing #N
-  [bold]news[/]                        Show recent news
-  [bold]download-news[/] <N>           Download news article #N
-  [bold]open-news[/] <N>              Open news article #N in browser
-  [bold]summary[/]                     Show moat + intrinsic value summary
-  [bold]export[/] <txt|html|pdf>       Export report to file
+  [bold]metrics[/]                      Show last analysis metrics
+  [bold]filings[/]                      List SEC filings
+  [bold]download-filing[/] <N>          Download filing #N
+  [bold]news[/]                         Show recent news
+  [bold]download-news[/] <N>            Download news article #N
+  [bold]open-news[/] <N>                Open news article #N in browser
+  [bold]summary[/]                      Show moat + intrinsic value summary
+  [bold]export[/] <txt|html|pdf>        Export report to file
 
 [bold cyan]Cache:[/]
-  [bold]cache[/]                       List all cached tickers
-  [bold]drop-cache[/] <TICKER>         Remove cached data for a ticker
-  [bold]drop-cache all[/]              Remove all cached data
+  [bold]cache[/]                        List all cached tickers
+  [bold]drop-cache[/] <TICKER>          Remove cached data for a ticker
+  [bold]drop-cache all[/]               Remove all cached data
 
 [bold cyan]Learn:[/]
-  [bold]explain[/] <metric>            Explain a metric (e.g. explain pe_trailing)
-  [bold]explain-all[/]                 List all metric explanations
+  [bold]explain[/] <metric>             Explain a metric (e.g. explain pe_trailing)
+  [bold]explain-all[/]                  List all metric explanations
+  [bold]explain-section[/] <section>    Explain an analysis section
+  [bold]explain-conclusion[/] \[category]  Explain conclusion methodology
 
 [bold cyan]Other:[/]
-  [bold]about[/]                       Show about, author, and license
-  [bold]help[/]                        Show this menu
-  [bold]quit[/]                        Exit
+  [bold]about[/]                        Show about, author, and license
+  [bold]help[/]                         Show this menu
+  [bold]quit[/]                         Exit
 """
 
 
@@ -87,7 +89,10 @@ def run_interactive() -> None:
         prompt_color = "yellow" if is_testing() else "cyan"
         prompt_suffix = " [test]" if is_testing() else ""
         try:
-            raw = Prompt.ask(f"\n[bold {prompt_color}]lynx-fa{prompt_suffix}[/]").strip()
+            # Use input() instead of Rich Prompt.ask() so that the
+            # readline module provides arrow-key command history.
+            console.print(f"\n[bold {prompt_color}]lynx-fundamental{prompt_suffix}[/] ", end="")
+            raw = input().strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\n[dim]Goodbye![/]")
             break
@@ -137,6 +142,41 @@ def run_interactive() -> None:
             console.print(t)
             console.print("[dim]Use 'explain <key>' for detailed explanation.[/]")
 
+        elif cmd == "explain-section":
+            from lynx.metrics.explanations import get_section_explanation, SECTION_EXPLANATIONS
+            if not arg:
+                # List available sections
+                console.print("[bold]Available sections:[/]")
+                for key, sec in SECTION_EXPLANATIONS.items():
+                    console.print(f"  [bold cyan]{key:20s}[/] {sec['title']}")
+                console.print("\n[dim]Use 'explain-section <key>' for details.[/]")
+            else:
+                sec = get_section_explanation(arg.lower().replace(" ", "_").replace("-", "_"))
+                if sec:
+                    console.print(Panel(
+                        f"[bold]{sec['title']}[/]\n\n{sec['description']}",
+                        title=f"[bold]{sec['title']}[/]",
+                        border_style="cyan",
+                    ))
+                else:
+                    console.print(f"[red]Unknown section '{arg}'.[/] Use 'explain-section' to list all.")
+
+        elif cmd == "explain-conclusion":
+            from lynx.metrics.explanations import get_conclusion_explanation, CONCLUSION_METHODOLOGY
+            key = arg.lower().replace(" ", "_").replace("-", "_") if arg else "overall"
+            ce = get_conclusion_explanation(key)
+            if ce:
+                console.print(Panel(
+                    f"[bold]{ce['title']}[/]\n\n{ce['description']}",
+                    title=f"[bold]{ce['title']}[/]",
+                    border_style="cyan",
+                ))
+            else:
+                console.print("[bold]Available conclusion categories:[/]")
+                for k, v in CONCLUSION_METHODOLOGY.items():
+                    console.print(f"  [bold cyan]{k:20s}[/] {v['title']}")
+                console.print("\n[dim]Use 'explain-conclusion <category>' for details.[/]")
+
         elif cmd == "about":
             _show_about()
 
@@ -170,13 +210,13 @@ def run_interactive() -> None:
                 console.print("[red]No identifier provided.[/]")
                 continue
             try:
-                current_report = run_full_analysis(
+                current_report = run_progressive_analysis(
                     identifier=arg,
                     download_reports=True,
                     download_news=True,
                     refresh=force_refresh,
+                    on_progress=display_report_stage,
                 )
-                display_full_report(current_report)
             except ValueError as e:
                 console.print(f"[bold red]Error:[/] {e}")
             except (ConnectionError, TimeoutError, OSError) as e:
@@ -312,12 +352,30 @@ def run_interactive() -> None:
                 continue
             _drop_cache(arg)
 
+        elif cmd == "matrix":
+            from lynx.easter import rich_matrix
+            rich_matrix(console)
+
+        elif cmd == "fortune":
+            from lynx.easter import rich_fortune
+            rich_fortune(console)
+
+        elif cmd == "rocket":
+            from lynx.easter import rich_rocket
+            rich_rocket(console)
+
+        elif cmd == "lynx":
+            from lynx.easter import rich_lynx
+            rich_lynx(console)
+
         else:
             console.print(f"[dim]Unknown command '{cmd}'. Trying as ticker...[/]")
             try:
                 force = is_testing()
-                current_report = run_full_analysis(identifier=raw, refresh=force)
-                display_full_report(current_report)
+                current_report = run_progressive_analysis(
+                    identifier=raw, refresh=force,
+                    on_progress=display_report_stage,
+                )
             except ValueError as e:
                 console.print(f"[red]Could not resolve '{raw}':[/] {e}")
                 console.print("[dim]Type 'help' for available commands.[/]")

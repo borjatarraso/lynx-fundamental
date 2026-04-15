@@ -1,4 +1,4 @@
-"""Command-line interface for Lynx FA."""
+"""Command-line interface for lynx-fundamental."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from lynx import __author__, __author_email__, __license__, __version__, __year_
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="lynx-fa",
+        prog="lynx-fundamental",
         description=(
             "Lynx Fundamental Analysis — Value investing research tool.\n"
             "Fetch, calculate, and display fundamental metrics, SEC filings,\n"
@@ -20,21 +20,21 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  lynx-fa -p AAPL                       Production analysis (uses cache)\n"
-            "  lynx-fa -p AAPL --refresh              Force fresh data download\n"
-            "  lynx-fa -t AAPL                        Testing analysis (fresh, isolated)\n"
-            "  lynx-fa -p OCO.V                       Analyze TSXV stock\n"
-            '  lynx-fa -p "Oroco Resource"            Search by company name\n'
-            "  lynx-fa -p -s AT1                      Search for AT1 across exchanges\n"
-            "  lynx-fa -p --list-cache                Show cached tickers\n"
-            "  lynx-fa -p --drop-cache AAPL           Remove cached data for AAPL\n"
-            "  lynx-fa -p --drop-cache ALL            Remove all cached data\n"
-            "  lynx-fa -t --drop-cache ALL            Remove all test data\n"
-            "  lynx-fa -p -i                          Interactive mode (production)\n"
-            "  lynx-fa -t -i                          Interactive mode (testing)\n"
-            "  lynx-fa -p -tui                        Textual UI (production)\n"
-            "  lynx-fa -p -x                          Graphical UI (production)\n"
-            "  lynx-fa -p -x AAPL                     Graphical UI with pre-filled ticker\n"
+            "  lynx-fundamental -p AAPL                       Production analysis (uses cache)\n"
+            "  lynx-fundamental -p AAPL --refresh              Force fresh data download\n"
+            "  lynx-fundamental -t AAPL                        Testing analysis (fresh, isolated)\n"
+            "  lynx-fundamental -p OCO.V                       Analyze TSXV stock\n"
+            '  lynx-fundamental -p "Oroco Resource"            Search by company name\n'
+            "  lynx-fundamental -p -s AT1                      Search for AT1 across exchanges\n"
+            "  lynx-fundamental -p --list-cache                Show cached tickers\n"
+            "  lynx-fundamental -p --drop-cache AAPL           Remove cached data for AAPL\n"
+            "  lynx-fundamental -p --drop-cache ALL            Remove all cached data\n"
+            "  lynx-fundamental -t --drop-cache ALL            Remove all test data\n"
+            "  lynx-fundamental -p -i                          Interactive mode (production)\n"
+            "  lynx-fundamental -t -i                          Interactive mode (testing)\n"
+            "  lynx-fundamental -p -tui                        Textual UI (production)\n"
+            "  lynx-fundamental -p -x                          Graphical UI (production)\n"
+            "  lynx-fundamental -p -x AAPL                     Graphical UI with pre-filled ticker\n"
         ),
     )
 
@@ -162,6 +162,20 @@ def build_parser() -> argparse.ArgumentParser:
         const="__list__",
         help="Explain a metric (e.g. --explain pe_trailing). Use without argument to list all.",
     )
+    parser.add_argument(
+        "--explain-section",
+        metavar="SECTION",
+        nargs="?",
+        const="__list__",
+        help="Explain an analysis section (e.g. --explain-section valuation). Use without argument to list all.",
+    )
+    parser.add_argument(
+        "--explain-conclusion",
+        metavar="CATEGORY",
+        nargs="?",
+        const="overall",
+        help="Explain conclusion scoring methodology (overall, valuation, profitability, solvency, growth, moat).",
+    )
 
     return parser
 
@@ -170,10 +184,33 @@ def run_cli() -> None:
     """Parse arguments and dispatch to the appropriate mode."""
     parser = build_parser()
 
+    # Hidden features
+    if "--b2m" in sys.argv:
+        from rich.console import Console
+        from lynx.easter import rich_rocket, rich_fortune
+        c = Console()
+        rich_rocket(c)
+        rich_fortune(c)
+        return
+
     # Allow --about, --explain, and --version without requiring -p/-t
     if "--about" in sys.argv:
         from rich.console import Console
         _cmd_about(Console(stderr=True))
+        return
+
+    if "--explain-section" in sys.argv:
+        from rich.console import Console
+        idx = sys.argv.index("--explain-section")
+        section = sys.argv[idx + 1] if idx + 1 < len(sys.argv) and not sys.argv[idx + 1].startswith("-") else None
+        _cmd_explain_section(Console(stderr=True), section)
+        return
+
+    if "--explain-conclusion" in sys.argv:
+        from rich.console import Console
+        idx = sys.argv.index("--explain-conclusion")
+        cat = sys.argv[idx + 1] if idx + 1 < len(sys.argv) and not sys.argv[idx + 1].startswith("-") else "overall"
+        _cmd_explain_conclusion(Console(stderr=True), cat)
         return
 
     if "--explain" in sys.argv:
@@ -246,19 +283,19 @@ def run_cli() -> None:
     # In testing mode: always fresh (refresh is implicit)
     refresh = args.refresh or is_testing()
 
-    from lynx.core.analyzer import run_full_analysis
-    from lynx.display import display_full_report
+    from lynx.core.analyzer import run_progressive_analysis
+    from lynx.display import display_report_stage
 
     try:
-        report = run_full_analysis(
+        report = run_progressive_analysis(
             identifier=args.identifier,
             download_reports=not args.no_reports,
             download_news=not args.no_news,
             max_filings=args.max_filings,
             verbose=args.verbose,
             refresh=refresh,
+            on_progress=display_report_stage,
         )
-        display_full_report(report)
 
         if args.export:
             from pathlib import Path
@@ -387,6 +424,57 @@ def _cmd_about(con) -> None:
         border_style="dim",
     ))
     con.print()
+
+
+def _cmd_explain_section(con, section: str | None) -> None:
+    from rich.panel import Panel
+    from rich.table import Table
+    from lynx.metrics.explanations import get_section_explanation, SECTION_EXPLANATIONS
+
+    if section is None or section == "__list__":
+        t = Table(title="Analysis Sections", border_style="cyan")
+        t.add_column("Key", style="bold cyan", min_width=18)
+        t.add_column("Title", min_width=30)
+        for key, sec in SECTION_EXPLANATIONS.items():
+            t.add_row(key, sec["title"])
+        con.print(t)
+        con.print("[dim]Use --explain-section <key> for details.[/]")
+        return
+
+    key = section.lower().replace("-", "_").replace(" ", "_")
+    sec = get_section_explanation(key)
+    if not sec:
+        con.print(f"[red]Unknown section '{section}'.[/] Use --explain-section to list all.")
+        return
+
+    con.print(Panel(
+        f"[bold]{sec['title']}[/]\n\n{sec['description']}",
+        title=f"[bold]{sec['title']}[/]",
+        border_style="cyan",
+    ))
+
+
+def _cmd_explain_conclusion(con, category: str) -> None:
+    from rich.panel import Panel
+    from rich.table import Table
+    from lynx.metrics.explanations import get_conclusion_explanation, CONCLUSION_METHODOLOGY
+
+    key = category.lower().replace("-", "_").replace(" ", "_") if category else "overall"
+    ce = get_conclusion_explanation(key)
+    if ce:
+        con.print(Panel(
+            f"[bold]{ce['title']}[/]\n\n{ce['description']}",
+            title=f"[bold]{ce['title']}[/]",
+            border_style="cyan",
+        ))
+    else:
+        t = Table(title="Conclusion Categories", border_style="cyan")
+        t.add_column("Key", style="bold cyan", min_width=18)
+        t.add_column("Title", min_width=30)
+        for k, v in CONCLUSION_METHODOLOGY.items():
+            t.add_row(k, v["title"])
+        con.print(t)
+        con.print("[dim]Use --explain-conclusion <key> for details.[/]")
 
 
 def _cmd_drop_cache(con, target: str) -> None:

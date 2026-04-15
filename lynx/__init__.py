@@ -1,6 +1,6 @@
 """Lynx Fundamental Analysis — Value investing research tool with moat analysis."""
 
-__version__ = "0.2.0"
+__version__ = "1.0"
 __author__ = "Borja Tarraso"
 __author_email__ = "borja.tarraso@member.fsf.org"
 __year__ = "2026"
@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE."""
 def get_about_text() -> dict:
     """Return structured about information."""
     return {
-        "name": "Lynx FA — Fundamental Analysis",
+        "name": "Lynx Fundamental Analysis",
         "suite": "Lince Investor Suite",
         "version": __version__,
         "author": __author__,

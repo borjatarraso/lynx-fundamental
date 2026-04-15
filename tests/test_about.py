@@ -15,7 +15,7 @@ from lynx import (
 class TestAboutMetadata:
     def test_version_format(self):
         parts = __version__.split(".")
-        assert len(parts) == 3
+        assert len(parts) >= 2
         assert all(p.isdigit() for p in parts)
 
     def test_author(self):

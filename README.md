@@ -1,4 +1,9 @@
-# Lynx FA — Fundamental Analysis for Value Investing
+# Lynx Fundamental
+
+**Fundamental analysis for value investing**
+
+[![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-green.svg)](LICENSE)
 
 A command-line tool for fundamental analysis focused on **value investing** and **economic moat** detection. Fetches, calculates, and displays 40+ financial metrics, SEC filings, and news for any publicly traded company — from mega-caps like Apple to micro-caps on TSXV or OTC Pink Sheets.
 
@@ -43,47 +48,48 @@ The tool requires one of two execution modes:
 
 ```bash
 # Production: analyze (uses cache if available)
-lynx-fa -p AAPL
+lynx-fundamental -p AAPL
 
 # Production: force fresh data download
-lynx-fa -p AAPL --refresh
+lynx-fundamental -p AAPL --refresh
 
 # Testing: always fetches fresh, writes to data_test/
-lynx-fa -t AAPL
+lynx-fundamental -t AAPL
 
 # Analyze TSXV / OTC / international stocks
-lynx-fa -p OCO.V                 # TSXV (Oroco Resource)
-lynx-fa -p AT1.DE                # XETRA (Aroundtown)
-lynx-fa -p ORRCF                 # OTC Pink
-lynx-fa -p "F3 Uranium"          # Search by company name
+lynx-fundamental -p OCO.V                 # TSXV (Oroco Resource)
+lynx-fundamental -p AT1.DE                # XETRA (Aroundtown)
+lynx-fundamental -p ORRCF                 # OTC Pink
+lynx-fundamental -p "F3 Uranium"          # Search by company name
 
 # Search for a company across exchanges
-lynx-fa -p -s "Aroundtown"
+lynx-fundamental -p -s "Aroundtown"
 
 # Launch interactive mode
-lynx-fa -p -i                    # Production interactive
-lynx-fa -t -i                    # Testing interactive
+lynx-fundamental -p -i                    # Production interactive
+lynx-fundamental -t -i                    # Testing interactive
 
 # Launch terminal UI
-lynx-fa -p -tui
+lynx-fundamental -p -tui
 
 # Cache management (mode-specific)
-lynx-fa -p --list-cache          # Show production cached tickers
-lynx-fa -t --list-cache          # Show test cached tickers
-lynx-fa -p --drop-cache AAPL     # Remove production data for AAPL
-lynx-fa -t --drop-cache ALL      # Clear all test data
+lynx-fundamental -p --list-cache          # Show production cached tickers
+lynx-fundamental -t --list-cache          # Show test cached tickers
+lynx-fundamental -p --drop-cache AAPL     # Remove production data for AAPL
+lynx-fundamental -t --drop-cache ALL      # Clear all test data
 
 # Skip reports or news
-lynx-fa -p GOOG --no-reports --no-news
+lynx-fundamental -p GOOG --no-reports --no-news
 ```
 
 ## CLI Reference
 
 ```
-usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
+usage: lynx-fundamental [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
                [--drop-cache [TICKER]] [--list-cache] [--no-reports]
                [--no-news] [--max-filings N] [--verbose] [--version]
-               [--about] [--explain [METRIC]] [--export FORMAT]
+               [--about] [--explain [METRIC]] [--explain-section [SECTION]]
+               [--explain-conclusion [CATEGORY]] [--export FORMAT]
                [--output PATH] [identifier]
 ```
 
@@ -105,6 +111,8 @@ usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
 | `-v`, `--verbose` | Verbose output |
 | `--about` | Show about information, author, and license |
 | `--explain [METRIC]` | Explain a metric (or list all if no argument) |
+| `--explain-section [SECTION]` | Explain an analysis section (or list all) |
+| `--explain-conclusion [CATEGORY]` | Explain conclusion scoring methodology |
 | `--export FORMAT` | Export report to file (txt, html, pdf) |
 | `--output PATH` | Output path for export (default: auto) |
 
@@ -177,7 +185,7 @@ In production mode, subsequent runs reuse cached data automatically. Use `--refr
 
 ## Interactive Mode Commands
 
-Launch with `lynx-fa -i`:
+Launch with `lynx-fundamental -i`:
 
 | Command | Description |
 |---------|-------------|
@@ -196,13 +204,14 @@ Launch with `lynx-fa -i`:
 | `export <txt\|html\|pdf>` | Export report to file |
 | `explain <metric>` | Explain a metric (full name, formula, why it matters) |
 | `explain-all` | List all metric explanations |
-| `open-news <N>` | Open article in browser |
+| `explain-section <section>` | Explain an analysis section |
+| `explain-conclusion [category]` | Explain conclusion scoring methodology |
 | `about` | Show about, author, and license |
 
 ## Project Structure
 
 ```
-lynx-fa/
+lynx-fundamental/
 ├── pyproject.toml
 ├── lynx/
 │   ├── __main__.py          # Entry point
@@ -216,18 +225,21 @@ lynx-fa/
 │   │   ├── reports.py       # SEC filings via yfinance + EDGAR
 │   │   ├── news.py          # News from Yahoo Finance + Google RSS
 │   │   ├── storage.py       # Local data persistence + cache
+│   │   ├── conclusion.py    # Report synthesis (tier-weighted scoring)
 │   │   └── ticker.py        # ISIN/ticker/name resolution
 │   ├── metrics/
 │   │   ├── calculator.py    # All metric calculations (tier-aware)
-│   │   ├── explanations.py  # 35+ metric explanations (full name, formula, why)
-│   │   └── relevance.py     # Metric relevance per company tier
+│   │   ├── explanations.py  # Metric, section, and conclusion explanations
+│   │   ├── relevance.py     # Metric relevance per company tier
+│   │   └── sector_insights.py # Sector & industry analysis guidance (11 sectors, 16 industries)
 │   ├── export/
 │   │   ├── __init__.py      # Export dispatcher (TXT/HTML/PDF)
 │   │   ├── txt_export.py    # Plaintext via Rich console capture
 │   │   ├── html_export.py   # Standalone HTML with dark theme
 │   │   └── pdf_export.py    # PDF via weasyprint (optional)
 │   ├── tui/
-│   │   └── app.py           # Textual terminal UI
+│   │   ├── app.py           # Textual terminal UI
+│   │   └── themes.py        # Custom TUI themes (7 themes)
 │   └── gui/
 │       └── app.py           # Tkinter graphical interface
 ├── data/                    # Production data storage (gitignored)
@@ -237,7 +249,7 @@ lynx-fa/
 ## Interfaces
 
 ### Console Mode (default)
-Direct CLI analysis: `lynx-fa -p AAPL`
+Direct CLI analysis: `lynx-fundamental -p AAPL`
 
 ### Interactive Mode (`-i`)
 REPL with commands: analyze, search, filings, news, summary, about, etc.
@@ -270,17 +282,21 @@ Category weights shift by tier: micro/nano caps weight solvency at 35-40%, while
 
 ## Metric Explanations
 
-Use `lynx-fa --explain pe_trailing` to see the full name, description, why the metric matters for value investing, and the calculation formula. Use `lynx-fa --explain` to list all 35+ metrics.
+Use `lynx-fundamental --explain pe_trailing` to see the full name, description, why the metric matters for value investing, and the calculation formula. Use `lynx-fundamental --explain` to list all 35+ metrics.
 
-Available in all modes: `explain` command (interactive), **E** key (TUI), `--explain` flag (CLI).
+**Section explanations**: Use `--explain-section valuation` to understand what each analysis section covers and why it matters. Available in all modes.
+
+**Conclusion methodology**: Use `--explain-conclusion` to see how the overall score is calculated, including tier-specific category weights and scoring rules. Use `--explain-conclusion valuation` for a specific category.
+
+Available in all modes: `explain` / `explain-section` / `explain-conclusion` commands (interactive), **e** key (TUI, context-aware), `?` button (GUI), `--explain*` flags (CLI).
 
 ## Export Reports
 
 Export full analyses to TXT, HTML, or PDF:
 
 ```bash
-lynx-fa -p AAPL --export html                   # Auto-named in data dir
-lynx-fa -p AAPL --export pdf --output report.pdf # Custom path
+lynx-fundamental -p AAPL --export html                   # Auto-named in data dir
+lynx-fundamental -p AAPL --export pdf --output report.pdf # Custom path
 ```
 
 Available in all modes: `export txt` (interactive), **X** key (TUI), **Export** button (GUI).
@@ -289,7 +305,7 @@ PDF export requires `weasyprint`: `pip install weasyprint`
 
 ## About
 
-Use `lynx-fa --about` (console), `about` (interactive), **F1** (TUI), or the **About** button (GUI) to view author and license information.
+Use `lynx-fundamental --about` (console), `about` (interactive), **F1** (TUI), or the **About** button (GUI) to view author and license information.
 
 ## License
 

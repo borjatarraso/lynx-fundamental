@@ -208,6 +208,7 @@ class FinancialStatement:
     operating_income: Optional[float] = None
     net_income: Optional[float] = None
     ebitda: Optional[float] = None
+    interest_expense: Optional[float] = None
     total_assets: Optional[float] = None
     total_liabilities: Optional[float] = None
     total_equity: Optional[float] = None
@@ -271,15 +272,20 @@ class NewsArticle:
 
 @dataclass
 class AnalysisReport:
-    """Complete fundamental analysis for a company."""
+    """Complete fundamental analysis for a company.
+
+    Fields after ``profile`` default to *None* so that a report can be
+    built incrementally during progressive analysis — each section is
+    populated as its data becomes available.
+    """
     profile: CompanyProfile
-    valuation: ValuationMetrics
-    profitability: ProfitabilityMetrics
-    solvency: SolvencyMetrics
-    growth: GrowthMetrics
-    efficiency: EfficiencyMetrics
-    moat: MoatIndicators
-    intrinsic_value: IntrinsicValue
+    valuation: Optional[ValuationMetrics] = None
+    profitability: Optional[ProfitabilityMetrics] = None
+    solvency: Optional[SolvencyMetrics] = None
+    growth: Optional[GrowthMetrics] = None
+    efficiency: Optional[EfficiencyMetrics] = None
+    moat: Optional[MoatIndicators] = None
+    intrinsic_value: Optional[IntrinsicValue] = None
     financials: list[FinancialStatement] = field(default_factory=list)
     filings: list[Filing] = field(default_factory=list)
     news: list[NewsArticle] = field(default_factory=list)

@@ -95,7 +95,7 @@ def calc_profitability(
     if statements:
         s = statements[0]
         # ROIC
-        if s.operating_income and s.total_assets and s.total_cash is not None:
+        if s.operating_income is not None and s.total_assets and s.total_cash is not None:
             nopat = s.operating_income * 0.75
             invested_capital = s.total_assets - (s.total_cash or 0)
             if invested_capital > 0:
@@ -138,18 +138,20 @@ def calc_solvency(
         if st.ebitda and st.ebitda > 0 and s.total_debt:
             s.debt_to_ebitda = s.total_debt / st.ebitda
 
-        # Interest coverage
-        if st.operating_income and s.total_debt:
-            interest_expense = s.total_debt * 0.05
-            if interest_expense > 0:
-                s.interest_coverage = st.operating_income / interest_expense
+        # Interest coverage (prefer real interest expense; estimate at 5% as fallback)
+        if st.operating_income:
+            ie = abs(st.interest_expense) if st.interest_expense else None
+            if ie is None and s.total_debt:
+                ie = s.total_debt * 0.05
+            if ie and ie > 0:
+                s.interest_coverage = st.operating_income / ie
 
         # Altman Z-Score (meaningful mainly for mid+ caps with revenue)
         if st.total_assets and st.total_assets > 0 and st.revenue and st.revenue > 0:
             ta = st.total_assets
             wc = 0
-            if s.current_ratio and st.current_liabilities:
-                wc = (st.current_assets or 0) - (st.current_liabilities or 0)
+            if st.current_assets is not None and st.current_liabilities is not None:
+                wc = st.current_assets - st.current_liabilities
             elif s.current_ratio:
                 current_liab = ta / s.current_ratio if s.current_ratio > 0 else 0
                 wc = (s.current_ratio * current_liab) - current_liab if current_liab else 0
@@ -690,7 +692,7 @@ def calc_intrinsic_value(
 def _calc_roic_history(statements: list[FinancialStatement]) -> list[Optional[float]]:
     roic_values = []
     for s in statements:
-        if s.operating_income and s.total_assets and s.total_cash is not None:
+        if s.operating_income is not None and s.total_assets and s.total_cash is not None:
             nopat = s.operating_income * 0.75
             ic = s.total_assets - (s.total_cash or 0)
             if ic > 0:

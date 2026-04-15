@@ -49,18 +49,28 @@ def _tier_label(tier: CompanyTier) -> str:
 
 # ---- Formatters ----
 
-def fmt_pct(val, digits: int = 2) -> str:
+def _isna(val) -> bool:
+    """Check if a value is None or NaN."""
     if val is None:
+        return True
+    try:
+        import math
+        return math.isnan(val)
+    except (TypeError, ValueError):
+        return False
+
+def fmt_pct(val, digits: int = 2) -> str:
+    if _isna(val):
         return "[dim]N/A[/]"
     return f"{val * 100:.{digits}f}%"
 
 def fmt_num(val, digits: int = 2) -> str:
-    if val is None:
+    if _isna(val):
         return "[dim]N/A[/]"
     return f"{val:,.{digits}f}"
 
 def fmt_money(val) -> str:
-    if val is None:
+    if _isna(val):
         return "[dim]N/A[/]"
     if abs(val) >= 1_000_000_000_000:
         return f"${val / 1_000_000_000_000:,.2f}T"
@@ -121,11 +131,93 @@ def _add_metric_row(
 # ======================================================================
 
 def display_full_report(report: AnalysisReport) -> None:
+    """Render the complete report at once (classic mode)."""
+    _display_header(report)
+    _display_profile(report)
+    if report.valuation:
+        _display_valuation(report)
+    if report.profitability:
+        _display_profitability(report)
+    if report.solvency:
+        _display_solvency(report)
+    if report.growth:
+        _display_growth(report)
+    if report.moat:
+        _display_moat(report)
+    if report.intrinsic_value:
+        _display_intrinsic_value(report)
+    _display_financials(report)
+    _display_filings(report)
+    _display_news(report)
+    if report.valuation:  # conclusion needs metrics
+        _display_conclusion(report)
+    console.print()
+
+
+_progressive_stages_seen: set[str] = set()
+
+
+def display_report_stage(stage: str, report: AnalysisReport) -> None:
+    """Render a single stage of the report (progressive mode).
+
+    Called by the progress callback so each section is displayed as soon
+    as its data becomes available.  Callbacks are always dispatched to
+    the main/UI thread in all modes, so concurrent access does not occur.
+    """
+    global _progressive_stages_seen
+
+    if stage == "profile":
+        _progressive_stages_seen = {"profile"}
+        _display_header(report)
+        _display_profile(report)
+    elif stage == "financials":
+        _progressive_stages_seen.add("financials")
+        _display_financials(report)
+    elif stage == "valuation":
+        _progressive_stages_seen.add("valuation")
+        _display_valuation(report)
+    elif stage == "profitability":
+        _progressive_stages_seen.add("profitability")
+        _display_profitability(report)
+    elif stage == "solvency":
+        _progressive_stages_seen.add("solvency")
+        _display_solvency(report)
+    elif stage == "growth":
+        _progressive_stages_seen.add("growth")
+        _display_growth(report)
+    elif stage == "moat":
+        _progressive_stages_seen.add("moat")
+        _display_moat(report)
+    elif stage == "intrinsic_value":
+        _progressive_stages_seen.add("intrinsic_value")
+        _display_intrinsic_value(report)
+    elif stage == "filings":
+        _progressive_stages_seen.add("filings")
+        _display_filings(report)
+    elif stage == "news":
+        _progressive_stages_seen.add("news")
+        _display_news(report)
+    elif stage == "conclusion":
+        _progressive_stages_seen.add("conclusion")
+        _display_conclusion(report)
+    elif stage == "complete":
+        if not _progressive_stages_seen:
+            # Cached report — only "complete" was emitted; render everything.
+            display_full_report(report)
+        else:
+            console.print()
+        _progressive_stages_seen = set()
+
+
+# ======================================================================
+# Header & profile (extracted for progressive display)
+# ======================================================================
+
+def _display_header(report: AnalysisReport) -> None:
+    """Render the report header and tier banner."""
     p = report.profile
     tier = p.tier
 
-    # --- Header with tier banner ---
-    console.print()
     header = Text()
     header.append(f"  {p.name}", style="bold white on blue")
     header.append(f"  ({p.ticker})", style="bold cyan on blue")
@@ -133,7 +225,6 @@ def display_full_report(report: AnalysisReport) -> None:
         header.append(f"  ISIN: {p.isin}", style="dim on blue")
     console.print(Panel(header, title="[bold]LYNX Fundamental Analysis[/]", border_style="blue"))
 
-    # Tier banner
     tc = _tier_color(tier)
     console.print(Panel(
         f"[{tc}]{_tier_label(tier)}[/]\n"
@@ -142,7 +233,10 @@ def display_full_report(report: AnalysisReport) -> None:
         title=f"[{tc}]{tier.value}[/]",
     ))
 
-    # Profile
+
+def _display_profile(report: AnalysisReport) -> None:
+    """Render the company profile card."""
+    p = report.profile
     profile_table = Table(show_header=False, box=None, padding=(0, 2))
     profile_table.add_column("Key", style="bold")
     profile_table.add_column("Value")
@@ -159,17 +253,49 @@ def display_full_report(report: AnalysisReport) -> None:
         desc = p.description[:500] + ("..." if len(p.description) > 500 else "")
         console.print(Panel(desc, title="[bold]Business Description[/]", border_style="dim"))
 
-    _display_valuation(report)
-    _display_profitability(report)
-    _display_solvency(report)
-    _display_growth(report)
-    _display_moat(report)
-    _display_intrinsic_value(report)
-    _display_conclusion(report)
-    _display_financials(report)
-    _display_filings(report)
-    _display_news(report)
-    console.print()
+    _display_sector_industry(report)
+
+
+def _display_sector_industry(report: AnalysisReport) -> None:
+    """Render sector and industry insight panels after the profile."""
+    try:
+        from lynx.metrics.sector_insights import get_sector_insight, get_industry_insight
+    except ImportError:
+        return
+
+    p = report.profile
+    sector_info = get_sector_insight(p.sector)
+    industry_info = get_industry_insight(p.industry)
+
+    if sector_info:
+        t = Table(show_header=False, box=None, padding=(0, 1))
+        t.add_column("Key", style="bold cyan", min_width=20)
+        t.add_column("Value")
+        t.add_row("Overview", sector_info.overview)
+        t.add_row("Critical Metrics", ", ".join(sector_info.critical_metrics))
+        t.add_row("Key Risks", ", ".join(sector_info.key_risks))
+        t.add_row("What to Watch", ", ".join(sector_info.what_to_watch))
+        t.add_row("Typical Valuation", sector_info.typical_valuation)
+        console.print(Panel(
+            t,
+            title=f"[bold]Sector: {sector_info.sector}[/]",
+            border_style="blue",
+        ))
+
+    if industry_info:
+        t = Table(show_header=False, box=None, padding=(0, 1))
+        t.add_column("Key", style="bold cyan", min_width=20)
+        t.add_column("Value")
+        t.add_row("Overview", industry_info.overview)
+        t.add_row("Critical Metrics", ", ".join(industry_info.critical_metrics))
+        t.add_row("Key Risks", ", ".join(industry_info.key_risks))
+        t.add_row("What to Watch", ", ".join(industry_info.what_to_watch))
+        t.add_row("Typical Valuation", industry_info.typical_valuation)
+        console.print(Panel(
+            t,
+            title=f"[bold]Industry: {industry_info.industry}[/]",
+            border_style="blue",
+        ))
 
 
 # ======================================================================
@@ -178,6 +304,8 @@ def display_full_report(report: AnalysisReport) -> None:
 
 def _display_valuation(report: AnalysisReport) -> None:
     v = report.valuation
+    if v is None:
+        return
     tier = report.profile.tier
     rel = lambda key: get_relevance(key, tier, "valuation")
 
@@ -204,6 +332,8 @@ def _display_valuation(report: AnalysisReport) -> None:
 
 def _display_profitability(report: AnalysisReport) -> None:
     p = report.profitability
+    if p is None:
+        return
     tier = report.profile.tier
     rel = lambda key: get_relevance(key, tier, "profitability")
 
@@ -226,6 +356,8 @@ def _display_profitability(report: AnalysisReport) -> None:
 
 def _display_solvency(report: AnalysisReport) -> None:
     s = report.solvency
+    if s is None:
+        return
     tier = report.profile.tier
     rel = lambda key: get_relevance(key, tier, "solvency")
 
@@ -264,6 +396,8 @@ def _display_solvency(report: AnalysisReport) -> None:
 
 def _display_growth(report: AnalysisReport) -> None:
     g = report.growth
+    if g is None:
+        return
     tier = report.profile.tier
     rel = lambda key: get_relevance(key, tier, "growth")
 
@@ -290,6 +424,8 @@ def _display_growth(report: AnalysisReport) -> None:
 
 def _display_moat(report: AnalysisReport) -> None:
     m = report.moat
+    if m is None:
+        return
     tier = report.profile.tier
 
     title = "Economic Moat Analysis"
@@ -299,8 +435,8 @@ def _display_moat(report: AnalysisReport) -> None:
         title = "Competitive Position Analysis"
 
     t = Table(title=title, show_lines=True, border_style="bold yellow")
-    t.add_column("Indicator", style="bold", min_width=25)
-    t.add_column("Assessment", min_width=50)
+    t.add_column("Indicator", style="bold", min_width=22)
+    t.add_column("Assessment", ratio=1)
 
     t.add_row("Position Score", fmt_score(m.moat_score))
     t.add_row("Competitive Position", m.competitive_position or "[dim]N/A[/]")
@@ -341,6 +477,8 @@ def _display_moat(report: AnalysisReport) -> None:
 
 def _display_intrinsic_value(report: AnalysisReport) -> None:
     iv = report.intrinsic_value
+    if iv is None:
+        return
     tier = report.profile.tier
 
     t = Table(title="Intrinsic Value Estimates", show_lines=True, border_style="bold green")
@@ -439,8 +577,8 @@ def _display_conclusion(report: AnalysisReport) -> None:
     # Strengths & Risks
     if c.strengths or c.risks:
         sr = Table(show_header=True, border_style="green")
-        sr.add_column("Strengths", style="green", min_width=40)
-        sr.add_column("Risks", style="red", min_width=40)
+        sr.add_column("Strengths", style="green", ratio=1)
+        sr.add_column("Risks", style="red", ratio=1)
         max_len = max(len(c.strengths), len(c.risks))
         for i in range(max_len):
             s = c.strengths[i] if i < len(c.strengths) else ""
@@ -484,12 +622,12 @@ def _display_news(report: AnalysisReport) -> None:
         return
     t = Table(title=f"Recent News ({len(report.news)} articles)", border_style="magenta")
     t.add_column("#", style="dim", width=3)
-    t.add_column("Title", min_width=50)
-    t.add_column("Source")
-    t.add_column("Date")
+    t.add_column("Title", ratio=3)
+    t.add_column("Source", ratio=1)
+    t.add_column("Date", ratio=1)
     for i, n in enumerate(report.news[:15], 1):
         raw_title = n.title or ""
-        title = raw_title[:80] + ("..." if len(raw_title) > 80 else "")
+        title = raw_title[:70] + ("..." if len(raw_title) > 70 else "")
         t.add_row(str(i), title, n.source or "", n.published or "")
     console.print(t)
 
@@ -681,6 +819,7 @@ def _assess_wc(val) -> str:
 
 def _assess_ncav_vs_price(ncav_ps, report: AnalysisReport) -> str:
     if ncav_ps is None: return ""
+    if report.intrinsic_value is None: return ""
     price = report.intrinsic_value.current_price
     if ncav_ps <= 0: return "[dim]Negative NCAV[/]"
     if price and ncav_ps > 0:

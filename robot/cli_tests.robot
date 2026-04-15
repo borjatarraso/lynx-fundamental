@@ -30,8 +30,8 @@ Output Should Contain
 *** Test Cases ***
 Version Flag Shows Version
     ${result}=    Run Lynx    --version
-    Output Should Contain    lynx-fa
-    Output Should Contain    0.2.0
+    Output Should Contain    lynx-fundamental
+    Output Should Contain    1.0
     Should Be Equal As Integers    ${result.rc}    0
 
 About Flag Shows Author
@@ -59,6 +59,37 @@ Explain Unknown Metric Shows Error
     Output Should Contain    Unknown metric
     Should Be Equal As Integers    ${result.rc}    0
 
+Explain Section Lists All Sections
+    ${result}=    Run Lynx    --explain-section
+    Output Should Contain    valuation
+    Output Should Contain    profitability
+    Output Should Contain    solvency
+    Output Should Contain    growth
+    Output Should Contain    moat
+    Should Be Equal As Integers    ${result.rc}    0
+
+Explain Specific Section
+    ${result}=    Run Lynx    --explain-section    valuation
+    Output Should Contain    Valuation Metrics
+    Output Should Contain    Price-based ratios
+    Should Be Equal As Integers    ${result.rc}    0
+
+Explain Unknown Section Shows Error
+    ${result}=    Run Lynx    --explain-section    nonexistent_section
+    Output Should Contain    Unknown section
+    Should Be Equal As Integers    ${result.rc}    0
+
+Explain Conclusion Overall
+    ${result}=    Run Lynx    --explain-conclusion
+    Output Should Contain    Conclusion Methodology
+    Output Should Contain    weighted average
+    Should Be Equal As Integers    ${result.rc}    0
+
+Explain Conclusion Category
+    ${result}=    Run Lynx    --explain-conclusion    valuation
+    Output Should Contain    Valuation Score
+    Should Be Equal As Integers    ${result.rc}    0
+
 Mode Required Without Special Flags
     ${result}=    Run Lynx    AAPL
     Should Not Be Equal As Integers    ${result.rc}    0
@@ -81,5 +112,7 @@ Help Flag Works
     Output Should Contain    testing-mode
     Output Should Contain    --export
     Output Should Contain    --explain
+    Output Should Contain    --explain-section
+    Output Should Contain    --explain-conclusion
     Output Should Contain    --about
     Should Be Equal As Integers    ${result.rc}    0

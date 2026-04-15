@@ -297,9 +297,200 @@ _add("moat_score",
      "valuation")
 
 
+# ---------------------------------------------------------------------------
+# Section explanations — describe what each analysis section covers
+# ---------------------------------------------------------------------------
+
+SECTION_EXPLANATIONS: dict[str, dict[str, str]] = {
+    "profile": {
+        "title": "Company Profile",
+        "description": (
+            "Basic identifying information about the company: name, ticker, ISIN, "
+            "sector, industry, country, exchange, market capitalization, employee "
+            "count, and business description. The market cap determines the "
+            "company's tier classification which controls which metrics are "
+            "emphasized throughout the analysis."
+        ),
+    },
+    "valuation": {
+        "title": "Valuation Metrics",
+        "description": (
+            "Price-based ratios that compare the stock price to earnings, book "
+            "value, revenue, cash flow, and other fundamentals. Low valuation "
+            "ratios may signal undervaluation; high ratios suggest the market "
+            "expects strong future growth. Compare within the same industry and "
+            "tier for meaningful context."
+        ),
+    },
+    "profitability": {
+        "title": "Profitability Metrics",
+        "description": (
+            "Measures of how efficiently the company converts revenue into profit. "
+            "Includes returns on equity (ROE), assets (ROA), and invested capital "
+            "(ROIC), plus margin analysis at gross, operating, net, FCF, and "
+            "EBITDA levels. High and stable margins are a key moat signal."
+        ),
+    },
+    "solvency": {
+        "title": "Solvency & Financial Health",
+        "description": (
+            "Balance sheet strength and leverage analysis. Covers debt ratios, "
+            "liquidity ratios, interest coverage, and the Altman Z-Score for "
+            "bankruptcy prediction. For small and micro caps, survival metrics "
+            "like cash burn rate and cash runway are critical."
+        ),
+    },
+    "growth": {
+        "title": "Growth Metrics",
+        "description": (
+            "Revenue, earnings, and free cash flow growth rates — both "
+            "year-over-year and compound annual (CAGR) over 3 and 5 years. Also "
+            "tracks share dilution which is critical for small/micro caps where "
+            "heavy dilution can destroy shareholder value."
+        ),
+    },
+    "moat": {
+        "title": "Economic Moat Analysis",
+        "description": (
+            "Qualitative and quantitative assessment of competitive advantages. "
+            "For large caps: ROIC consistency, margin stability, switching costs, "
+            "network effects, and cost advantages (Morningstar-style). For small "
+            "and micro caps: asset backing, revenue status, niche position, and "
+            "insider alignment."
+        ),
+    },
+    "intrinsic_value": {
+        "title": "Intrinsic Value Estimates",
+        "description": (
+            "Multiple valuation models to estimate what the company is worth. "
+            "DCF (Discounted Cash Flow) is primary for large caps; Graham Number "
+            "for value investors; NCAV (Net-Net) for micro/nano caps. Each method "
+            "shows margin of safety — the gap between current price and estimated "
+            "fair value. >25% margin = undervalued."
+        ),
+    },
+    "financials": {
+        "title": "Financial Statements",
+        "description": (
+            "Summary of annual income statement, balance sheet, and cash flow "
+            "data for the most recent 5 fiscal years. Shows revenue, gross profit, "
+            "operating income, net income, free cash flow, total equity, and total "
+            "debt trends."
+        ),
+    },
+    "filings": {
+        "title": "SEC Filings",
+        "description": (
+            "Regulatory filings from SEC EDGAR (or equivalent exchange for "
+            "international companies). Includes 10-K (annual reports), 10-Q "
+            "(quarterly), 8-K (current events), and other form types. Filings "
+            "can be downloaded for detailed review."
+        ),
+    },
+    "news": {
+        "title": "Recent News",
+        "description": (
+            "Aggregated news articles from Yahoo Finance and Google News. "
+            "Provides context about recent company events, earnings reports, "
+            "analyst opinions, and market sentiment."
+        ),
+    },
+    "conclusion": {
+        "title": "Assessment Conclusion",
+        "description": (
+            "The overall investment verdict synthesized from all analysis "
+            "categories. The conclusion uses tier-weighted scoring across 5 "
+            "categories (valuation, profitability, solvency, growth, moat) to "
+            "produce a score from 0-100 and a verdict from 'Strong Buy' to 'Avoid'."
+        ),
+    },
+}
+
+CONCLUSION_METHODOLOGY = {
+    "overall": {
+        "title": "Conclusion Methodology",
+        "description": (
+            "The overall score is a weighted average of 5 category scores "
+            "(valuation, profitability, solvency, growth, moat), each scored "
+            "0-100. Weights vary by company tier:\n\n"
+            "  Mega/Large:  Val 25%, Prof 25%, Solv 15%, Growth 15%, Moat 20%\n"
+            "  Mid Cap:     Val 25%, Prof 20%, Solv 20%, Growth 20%, Moat 15%\n"
+            "  Small Cap:   Val 20%, Prof 20%, Solv 25%, Growth 20%, Moat 15%\n"
+            "  Micro Cap:   Val 15%, Prof 15%, Solv 35%, Growth 20%, Moat 15%\n"
+            "  Nano Cap:    Val 10%, Prof 10%, Solv 40%, Growth 20%, Moat 20%\n\n"
+            "Verdicts: Strong Buy (>=75), Buy (>=60), Hold (>=45), Caution (>=30), Avoid (<30).\n\n"
+            "Each category score starts at a 50 baseline and is adjusted up or "
+            "down based on individual metric signals. Key strengths and risks are "
+            "extracted from the most significant positive and negative signals."
+        ),
+    },
+    "valuation": {
+        "title": "Valuation Score",
+        "description": (
+            "Starts at 50. Adjusted by: P/E trailing (+25 if <10, +15 if <15, "
+            "+5 if <20, -5 if <30, -15 if >=30), P/B ratio (+20 if <1, +10 if "
+            "<1.5, -10 if >=3), P/FCF (+15 if <10, +5 if <20, -10 if >=20), "
+            "EV/EBITDA (+15 if <8, +5 if <12, -10 if >=12). Clamped to 0-100."
+        ),
+    },
+    "profitability": {
+        "title": "Profitability Score",
+        "description": (
+            "Starts at 50. Adjusted by: ROE (+15 if >20%, +5 if >10%, -15 if <0), "
+            "ROIC (+15 if >15%, +5 if >10%, -15 if <0), Gross Margin (+10 if >50%, "
+            "+5 if >30%, -10 if <10%), Net Margin (+10 if >15%, +5 if >5%, -15 if <0). "
+            "Clamped to 0-100."
+        ),
+    },
+    "solvency": {
+        "title": "Solvency Score",
+        "description": (
+            "Starts at 50. Adjusted by: Debt/Equity (+15 if <0 (net cash), +10 if "
+            "<0.5, -15 if >2), Current Ratio (+10 if >2, +5 if >1.5, -15 if <1), "
+            "Altman Z-Score (+10 if >3, -20 if <1.8), Cash Runway (-25 if <1yr, "
+            "-10 if <2yrs). Clamped to 0-100."
+        ),
+    },
+    "growth": {
+        "title": "Growth Score",
+        "description": (
+            "Starts at 50. Adjusted by: Revenue Growth YoY (+15 if >20%, +5 if >5%, "
+            "-15 if <-10%), Earnings Growth YoY (+10 if >20%, +5 if >0, -10 if <-20%), "
+            "Revenue CAGR 3Y (+10 if >10%, +5 if >0, -10 if <0), Share Dilution "
+            "(+5 if buybacks >2%, -10 if dilution >10%). Clamped to 0-100."
+        ),
+    },
+    "moat": {
+        "title": "Moat Score",
+        "description": (
+            "The moat score (0-100) is computed in the moat calculator from: "
+            "ROIC consistency and level, gross margin stability, revenue "
+            "predictability, competitive position signals, and tier-specific "
+            "indicators. For micro/nano caps, asset backing, niche position, "
+            "and insider alignment replace traditional moat sources."
+        ),
+    },
+}
+
+
 def get_explanation(key: str) -> MetricExplanation | None:
     """Look up a metric explanation by key."""
     return METRIC_EXPLANATIONS.get(key)
+
+
+def get_section_explanation(section: str) -> dict[str, str] | None:
+    """Look up a section explanation by key (e.g. 'valuation', 'profile')."""
+    return SECTION_EXPLANATIONS.get(section)
+
+
+def get_conclusion_explanation(category: str | None = None) -> dict[str, str] | None:
+    """Look up conclusion methodology.
+
+    *category* can be 'overall', 'valuation', 'profitability', etc.
+    Returns None if no explanation is found.
+    """
+    key = category or "overall"
+    return CONCLUSION_METHODOLOGY.get(key)
 
 
 def list_metrics(category: str | None = None) -> list[MetricExplanation]:

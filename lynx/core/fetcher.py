@@ -14,13 +14,13 @@ from lynx.models import (
 )
 
 
-def fetch_company_profile(ticker: str) -> CompanyProfile:
-    """Fetch company profile information."""
-    try:
-        t = yf.Ticker(ticker)
-        info = t.info or {}
-    except Exception:
-        info = {}
+def fetch_company_profile(ticker: str, info: dict | None = None) -> CompanyProfile:
+    """Fetch company profile information.
+
+    If *info* is provided, uses it directly instead of making an API call.
+    """
+    if info is None:
+        info = fetch_info(ticker)
     return CompanyProfile(
         ticker=ticker.upper(),
         name=info.get("longName") or info.get("shortName", ticker),
@@ -102,6 +102,7 @@ def fetch_financial_statements(ticker: str) -> list[FinancialStatement]:
             stmt.operating_income = _get(income, col, "Operating Income")
             stmt.net_income = _get(income, col, "Net Income")
             stmt.ebitda = _get(income, col, "EBITDA")
+            stmt.interest_expense = _get(income, col, "Interest Expense", "Interest Expense Non Operating")
             stmt.eps = _get(income, col, "Basic EPS")
 
             # Merge balance sheet

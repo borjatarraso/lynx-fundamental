@@ -1,4 +1,4 @@
-"""Entry point for lynx-fa."""
+"""Entry point for lynx-fundamental."""
 
 from lynx.cli import run_cli
 

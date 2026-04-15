@@ -93,7 +93,14 @@ class TestExportHtml:
         path = export_report(report, ExportFormat.HTML, tmp_path / "test.html")
         content = path.read_text()
         assert "<title>" in content
-        assert "Lynx FA" in content
+        assert "Lynx Fundamental Analysis" in content
+
+    def test_html_white_background(self, tmp_path):
+        """HTML export must use white background for readability."""
+        report = _make_report()
+        path = export_report(report, ExportFormat.HTML, tmp_path / "test.html")
+        content = path.read_text()
+        assert "background: #ffffff" in content
 
 
 class TestExportPdf:
@@ -106,6 +113,33 @@ class TestExportPdf:
         except ImportError:
             with pytest.raises(RuntimeError, match="weasyprint"):
                 export_report(report, ExportFormat.PDF, tmp_path / "test.pdf")
+
+    def test_pdf_creates_valid_file(self, tmp_path):
+        """PDF export creates a valid PDF when weasyprint is installed."""
+        try:
+            import weasyprint
+        except ImportError:
+            pytest.skip("weasyprint not installed")
+        report = _make_report()
+        output = tmp_path / "test_output.pdf"
+        result = export_report(report, ExportFormat.PDF, output)
+        assert result.exists()
+        assert result.suffix == ".pdf"
+        content = result.read_bytes()
+        assert content[:5] == b"%PDF-"
+        # Verify intermediate HTML was cleaned up
+        assert not output.with_suffix(".html").exists()
+
+    def test_pdf_has_content(self, tmp_path):
+        """PDF file has reasonable size (not empty)."""
+        try:
+            import weasyprint
+        except ImportError:
+            pytest.skip("weasyprint not installed")
+        report = _make_report()
+        output = tmp_path / "test_size.pdf"
+        export_report(report, ExportFormat.PDF, output)
+        assert output.stat().st_size > 1000
 
 
 class TestExportAutoPath:

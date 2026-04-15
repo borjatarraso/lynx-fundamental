@@ -2,11 +2,30 @@
 
 Produces a tier-aware assessment with weighted scoring across categories,
 key strengths/risks identification, and an investment verdict.
+
+All scoring and summary functions are safe against *None* metric sections
+so that ``generate_conclusion`` can be called on partially-populated
+reports produced during progressive analysis.
 """
 
 from __future__ import annotations
 
+import math
+
 from lynx.models import AnalysisConclusion, AnalysisReport, CompanyTier
+
+
+def _safe(val, default: float = 0.0) -> float:
+    """Return *val* if it is a finite number, otherwise *default*."""
+    if val is None or isinstance(val, bool):
+        return default
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return f
+    except (TypeError, ValueError):
+        return default
 
 
 # Category weights by tier (valuation, profitability, solvency, growth, moat)
@@ -29,7 +48,7 @@ def generate_conclusion(report: AnalysisReport) -> AnalysisConclusion:
     prof_score = _score_profitability(report)
     solv_score = _score_solvency(report)
     grow_score = _score_growth(report)
-    moat_score = report.moat.moat_score or 0
+    moat_score = _safe(report.moat.moat_score) if report.moat else 0
 
     c.category_scores = {
         "valuation": round(val_score, 1),
@@ -65,35 +84,36 @@ def _verdict(score: float) -> str:
 
 def _score_valuation(r: AnalysisReport) -> float:
     v = r.valuation
+    if v is None:
+        return 50.0
     score = 50.0  # neutral baseline
-    signals = 0
 
-    if v.pe_trailing is not None:
-        signals += 1
-        if v.pe_trailing < 0: score += 0
-        elif v.pe_trailing < 10: score += 25
-        elif v.pe_trailing < 15: score += 15
-        elif v.pe_trailing < 20: score += 5
-        elif v.pe_trailing < 30: score -= 5
+    pe = _safe(v.pe_trailing, None)
+    if pe is not None:
+        if pe < 0: score += 0
+        elif pe < 10: score += 25
+        elif pe < 15: score += 15
+        elif pe < 20: score += 5
+        elif pe < 30: score -= 5
         else: score -= 15
 
-    if v.pb_ratio is not None:
-        signals += 1
-        if v.pb_ratio < 1: score += 20
-        elif v.pb_ratio < 1.5: score += 10
-        elif v.pb_ratio < 3: score += 0
+    pb = _safe(v.pb_ratio, None)
+    if pb is not None:
+        if pb < 1: score += 20
+        elif pb < 1.5: score += 10
+        elif pb < 3: score += 0
         else: score -= 10
 
-    if v.p_fcf is not None:
-        signals += 1
-        if v.p_fcf < 10: score += 15
-        elif v.p_fcf < 20: score += 5
+    pfcf = _safe(v.p_fcf, None)
+    if pfcf is not None:
+        if pfcf < 10: score += 15
+        elif pfcf < 20: score += 5
         else: score -= 10
 
-    if v.ev_ebitda is not None:
-        signals += 1
-        if v.ev_ebitda < 8: score += 15
-        elif v.ev_ebitda < 12: score += 5
+    ev = _safe(v.ev_ebitda, None)
+    if ev is not None:
+        if ev < 8: score += 15
+        elif ev < 12: score += 5
         else: score -= 10
 
     return max(0, min(100, score))
@@ -101,182 +121,227 @@ def _score_valuation(r: AnalysisReport) -> float:
 
 def _score_profitability(r: AnalysisReport) -> float:
     p = r.profitability
+    if p is None:
+        return 50.0
     score = 50.0
-    if p.roe is not None:
-        if p.roe > 0.20: score += 15
-        elif p.roe > 0.10: score += 5
-        elif p.roe < 0: score -= 15
-    if p.roic is not None:
-        if p.roic > 0.15: score += 15
-        elif p.roic > 0.10: score += 5
-        elif p.roic < 0: score -= 15
-    if p.gross_margin is not None:
-        if p.gross_margin > 0.50: score += 10
-        elif p.gross_margin > 0.30: score += 5
-        elif p.gross_margin < 0.10: score -= 10
-    if p.net_margin is not None:
-        if p.net_margin > 0.15: score += 10
-        elif p.net_margin > 0.05: score += 5
-        elif p.net_margin < 0: score -= 15
+    roe = _safe(p.roe, None)
+    if roe is not None:
+        if roe > 0.20: score += 15
+        elif roe > 0.10: score += 5
+        elif roe < 0: score -= 15
+    roic = _safe(p.roic, None)
+    if roic is not None:
+        if roic > 0.15: score += 15
+        elif roic > 0.10: score += 5
+        elif roic < 0: score -= 15
+    gm = _safe(p.gross_margin, None)
+    if gm is not None:
+        if gm > 0.50: score += 10
+        elif gm > 0.30: score += 5
+        elif gm < 0.10: score -= 10
+    nm = _safe(p.net_margin, None)
+    if nm is not None:
+        if nm > 0.15: score += 10
+        elif nm > 0.05: score += 5
+        elif nm < 0: score -= 15
     return max(0, min(100, score))
 
 
 def _score_solvency(r: AnalysisReport) -> float:
     s = r.solvency
+    if s is None:
+        return 50.0
     score = 50.0
-    if s.debt_to_equity is not None:
-        if s.debt_to_equity < 0: score += 15  # net cash
-        elif s.debt_to_equity < 0.5: score += 10
-        elif s.debt_to_equity > 2: score -= 15
-    if s.current_ratio is not None:
-        if s.current_ratio > 2: score += 10
-        elif s.current_ratio > 1.5: score += 5
-        elif s.current_ratio < 1: score -= 15
-    if s.altman_z_score is not None:
-        if s.altman_z_score > 3: score += 10
-        elif s.altman_z_score < 1.8: score -= 20
-    if s.cash_burn_rate is not None and s.cash_burn_rate < 0:
-        if s.cash_runway_years is not None:
-            if s.cash_runway_years < 1: score -= 25
-            elif s.cash_runway_years < 2: score -= 10
+    de = _safe(s.debt_to_equity, None)
+    if de is not None:
+        if de < 0: score += 15  # net cash
+        elif de < 0.5: score += 10
+        elif de > 2: score -= 15
+    cr = _safe(s.current_ratio, None)
+    if cr is not None:
+        if cr > 2: score += 10
+        elif cr > 1.5: score += 5
+        elif cr < 1: score -= 15
+    az = _safe(s.altman_z_score, None)
+    if az is not None:
+        if az > 3: score += 10
+        elif az < 1.8: score -= 20
+    burn = _safe(s.cash_burn_rate, None)
+    if burn is not None and burn < 0:
+        runway = _safe(s.cash_runway_years, None)
+        if runway is not None:
+            if runway < 1: score -= 25
+            elif runway < 2: score -= 10
     return max(0, min(100, score))
 
 
 def _score_growth(r: AnalysisReport) -> float:
     g = r.growth
+    if g is None:
+        return 50.0
     score = 50.0
-    if g.revenue_growth_yoy is not None:
-        if g.revenue_growth_yoy > 0.20: score += 15
-        elif g.revenue_growth_yoy > 0.05: score += 5
-        elif g.revenue_growth_yoy < -0.10: score -= 15
-    if g.earnings_growth_yoy is not None:
-        if g.earnings_growth_yoy > 0.20: score += 10
-        elif g.earnings_growth_yoy > 0: score += 5
-        elif g.earnings_growth_yoy < -0.20: score -= 10
-    if g.revenue_cagr_3y is not None:
-        if g.revenue_cagr_3y > 0.10: score += 10
-        elif g.revenue_cagr_3y > 0: score += 5
-        elif g.revenue_cagr_3y < 0: score -= 10
-    if g.shares_growth_yoy is not None:
-        if g.shares_growth_yoy < -0.02: score += 5  # buybacks
-        elif g.shares_growth_yoy > 0.10: score -= 10  # heavy dilution
+    rg = _safe(g.revenue_growth_yoy, None)
+    if rg is not None:
+        if rg > 0.20: score += 15
+        elif rg > 0.05: score += 5
+        elif rg < -0.10: score -= 15
+    eg = _safe(g.earnings_growth_yoy, None)
+    if eg is not None:
+        if eg > 0.20: score += 10
+        elif eg > 0: score += 5
+        elif eg < -0.20: score -= 10
+    rc = _safe(g.revenue_cagr_3y, None)
+    if rc is not None:
+        if rc > 0.10: score += 10
+        elif rc > 0: score += 5
+        elif rc < 0: score -= 10
+    dil = _safe(g.shares_growth_yoy, None)
+    if dil is not None:
+        if dil < -0.02: score += 5  # buybacks
+        elif dil > 0.10: score -= 10  # heavy dilution
     return max(0, min(100, score))
 
 
 def _build_summaries(r: AnalysisReport) -> dict[str, str]:
-    summaries = {}
-    v = r.valuation
-    if v.pe_trailing is not None:
-        pe_word = "cheap" if v.pe_trailing < 15 else "fair" if v.pe_trailing < 25 else "expensive"
-        summaries["valuation"] = f"Valuation appears {pe_word} with P/E of {v.pe_trailing:.1f}"
-        if v.pb_ratio is not None:
-            summaries["valuation"] += f" and P/B of {v.pb_ratio:.1f}"
+    summaries: dict[str, str] = {}
+
+    pe = _safe(r.valuation.pe_trailing, None) if r.valuation else None
+    if pe is not None:
+        pe_word = "cheap" if pe < 15 else "fair" if pe < 25 else "expensive"
+        summaries["valuation"] = f"Valuation appears {pe_word} with P/E of {pe:.1f}"
+        pb = _safe(r.valuation.pb_ratio, None) if r.valuation else None
+        if pb is not None:
+            summaries["valuation"] += f" and P/B of {pb:.1f}"
     else:
         summaries["valuation"] = "Limited valuation data available"
 
-    p = r.profitability
-    if p.net_margin is not None:
-        if p.net_margin > 0:
-            summaries["profitability"] = f"Profitable with {p.net_margin*100:.1f}% net margin"
+    nm = _safe(r.profitability.net_margin, None) if r.profitability else None
+    if nm is not None:
+        if nm > 0:
+            summaries["profitability"] = f"Profitable with {nm*100:.1f}% net margin"
         else:
-            summaries["profitability"] = f"Currently unprofitable ({p.net_margin*100:.1f}% net margin)"
+            summaries["profitability"] = f"Currently unprofitable ({nm*100:.1f}% net margin)"
     else:
         summaries["profitability"] = "Limited profitability data available"
 
-    s = r.solvency
-    if s.debt_to_equity is not None:
-        if s.debt_to_equity < 0.5:
+    de = _safe(r.solvency.debt_to_equity, None) if r.solvency else None
+    if de is not None:
+        if de < 0.5:
             summaries["solvency"] = "Conservative balance sheet with low leverage"
-        elif s.debt_to_equity < 1.5:
+        elif de < 1.5:
             summaries["solvency"] = "Moderate leverage, appears manageable"
         else:
             summaries["solvency"] = "Highly leveraged — elevated financial risk"
     else:
         summaries["solvency"] = "Limited solvency data available"
 
-    g = r.growth
-    if g.revenue_growth_yoy is not None:
-        if g.revenue_growth_yoy > 0.10:
-            summaries["growth"] = f"Strong revenue growth at {g.revenue_growth_yoy*100:.1f}% YoY"
-        elif g.revenue_growth_yoy > 0:
-            summaries["growth"] = f"Modest revenue growth at {g.revenue_growth_yoy*100:.1f}% YoY"
+    rg = _safe(r.growth.revenue_growth_yoy, None) if r.growth else None
+    if rg is not None:
+        if rg > 0.10:
+            summaries["growth"] = f"Strong revenue growth at {rg*100:.1f}% YoY"
+        elif rg > 0:
+            summaries["growth"] = f"Modest revenue growth at {rg*100:.1f}% YoY"
         else:
-            summaries["growth"] = f"Revenue declining at {g.revenue_growth_yoy*100:.1f}% YoY"
+            summaries["growth"] = f"Revenue declining at {rg*100:.1f}% YoY"
     else:
         summaries["growth"] = "Limited growth data available"
 
     m = r.moat
-    summaries["moat"] = m.competitive_position or "Moat assessment unavailable"
+    if m is not None:
+        summaries["moat"] = m.competitive_position or "Moat assessment unavailable"
+    else:
+        summaries["moat"] = "Moat assessment unavailable"
 
     return summaries
 
 
 def _find_strengths(r: AnalysisReport) -> list[str]:
-    strengths = []
-    v = r.valuation
-    if v.pe_trailing and 0 < v.pe_trailing < 15:
-        strengths.append(f"Attractive P/E of {v.pe_trailing:.1f}")
-    if v.pb_ratio and v.pb_ratio < 1:
-        strengths.append(f"Trading below book value (P/B {v.pb_ratio:.2f})")
+    strengths: list[str] = []
 
-    p = r.profitability
-    if p.roic and p.roic > 0.15:
-        strengths.append(f"Excellent ROIC of {p.roic*100:.1f}% — wide moat signal")
-    if p.gross_margin and p.gross_margin > 0.50:
-        strengths.append(f"High gross margins ({p.gross_margin*100:.1f}%) indicate pricing power")
-    if p.fcf_margin and p.fcf_margin > 0.15:
-        strengths.append(f"Strong cash generation ({p.fcf_margin*100:.1f}% FCF margin)")
+    if r.valuation is not None:
+        pe = _safe(r.valuation.pe_trailing, None)
+        if pe is not None and 0 < pe < 15:
+            strengths.append(f"Attractive P/E of {pe:.1f}")
+        pb = _safe(r.valuation.pb_ratio, None)
+        if pb is not None and pb < 1:
+            strengths.append(f"Trading below book value (P/B {pb:.2f})")
 
-    s = r.solvency
-    if s.debt_to_equity is not None and s.debt_to_equity < 0.3:
-        strengths.append("Very conservative balance sheet")
-    if s.current_ratio and s.current_ratio > 2:
-        strengths.append("Strong liquidity position")
+    if r.profitability is not None:
+        roic = _safe(r.profitability.roic, None)
+        if roic is not None and roic > 0.15:
+            strengths.append(f"Excellent ROIC of {roic*100:.1f}% — wide moat signal")
+        gm = _safe(r.profitability.gross_margin, None)
+        if gm is not None and gm > 0.50:
+            strengths.append(f"High gross margins ({gm*100:.1f}%) indicate pricing power")
+        fcf = _safe(r.profitability.fcf_margin, None)
+        if fcf is not None and fcf > 0.15:
+            strengths.append(f"Strong cash generation ({fcf*100:.1f}% FCF margin)")
 
-    g = r.growth
-    if g.revenue_cagr_3y and g.revenue_cagr_3y > 0.10:
-        strengths.append(f"Consistent revenue growth ({g.revenue_cagr_3y*100:.1f}% 3Y CAGR)")
-    if g.shares_growth_yoy is not None and g.shares_growth_yoy < -0.02:
-        strengths.append("Share buybacks — returning capital to shareholders")
+    if r.solvency is not None:
+        de = _safe(r.solvency.debt_to_equity, None)
+        if de is not None and de < 0.3:
+            strengths.append("Very conservative balance sheet")
+        cr = _safe(r.solvency.current_ratio, None)
+        if cr is not None and cr > 2:
+            strengths.append("Strong liquidity position")
 
-    m = r.moat
-    if m.moat_score and m.moat_score > 60:
-        strengths.append(f"Strong competitive position (moat score: {m.moat_score:.0f}/100)")
+    if r.growth is not None:
+        rc = _safe(r.growth.revenue_cagr_3y, None)
+        if rc is not None and rc > 0.10:
+            strengths.append(f"Consistent revenue growth ({rc*100:.1f}% 3Y CAGR)")
+        dil = _safe(r.growth.shares_growth_yoy, None)
+        if dil is not None and dil < -0.02:
+            strengths.append("Share buybacks — returning capital to shareholders")
+
+    if r.moat is not None:
+        ms = _safe(r.moat.moat_score, None)
+        if ms is not None and ms > 60:
+            strengths.append(f"Strong competitive position (moat score: {ms:.0f}/100)")
 
     return strengths[:5]
 
 
 def _find_risks(r: AnalysisReport) -> list[str]:
-    risks = []
-    v = r.valuation
-    if v.pe_trailing and v.pe_trailing > 30:
-        risks.append(f"Expensive valuation (P/E {v.pe_trailing:.1f})")
-    if v.pe_trailing and v.pe_trailing < 0:
-        risks.append("Negative earnings")
+    risks: list[str] = []
 
-    p = r.profitability
-    if p.net_margin is not None and p.net_margin < 0:
-        risks.append(f"Currently unprofitable ({p.net_margin*100:.1f}% net margin)")
-    if p.roic is not None and 0 < p.roic < 0.07:
-        risks.append(f"Low returns on capital (ROIC {p.roic*100:.1f}%)")
+    if r.valuation is not None:
+        pe = _safe(r.valuation.pe_trailing, None)
+        if pe is not None and pe > 30:
+            risks.append(f"Expensive valuation (P/E {pe:.1f})")
+        if pe is not None and pe < 0:
+            risks.append("Negative earnings")
 
-    s = r.solvency
-    if s.debt_to_equity is not None and s.debt_to_equity > 2:
-        risks.append(f"High leverage (D/E {s.debt_to_equity:.1f})")
-    if s.altman_z_score is not None and s.altman_z_score < 1.81:
-        risks.append(f"Bankruptcy risk (Z-Score {s.altman_z_score:.2f})")
-    if s.cash_runway_years is not None and s.cash_runway_years < 2:
-        risks.append(f"Limited cash runway ({s.cash_runway_years:.1f} years)")
+    if r.profitability is not None:
+        nm = _safe(r.profitability.net_margin, None)
+        if nm is not None and nm < 0:
+            risks.append(f"Currently unprofitable ({nm*100:.1f}% net margin)")
+        roic = _safe(r.profitability.roic, None)
+        if roic is not None and 0 < roic < 0.07:
+            risks.append(f"Low returns on capital (ROIC {roic*100:.1f}%)")
 
-    g = r.growth
-    if g.revenue_growth_yoy is not None and g.revenue_growth_yoy < -0.10:
-        risks.append(f"Revenue declining ({g.revenue_growth_yoy*100:.1f}% YoY)")
-    if g.shares_growth_yoy is not None and g.shares_growth_yoy > 0.10:
-        risks.append(f"Heavy share dilution ({g.shares_growth_yoy*100:.1f}%/yr)")
+    if r.solvency is not None:
+        de = _safe(r.solvency.debt_to_equity, None)
+        if de is not None and de > 2:
+            risks.append(f"High leverage (D/E {de:.1f})")
+        az = _safe(r.solvency.altman_z_score, None)
+        if az is not None and az < 1.81:
+            risks.append(f"Bankruptcy risk (Z-Score {az:.2f})")
+        rn = _safe(r.solvency.cash_runway_years, None)
+        if rn is not None and rn < 2:
+            risks.append(f"Limited cash runway ({rn:.1f} years)")
 
-    m = r.moat
-    if m.moat_score is not None and m.moat_score < 25:
-        risks.append("No economic moat detected")
+    if r.growth is not None:
+        rg = _safe(r.growth.revenue_growth_yoy, None)
+        if rg is not None and rg < -0.10:
+            risks.append(f"Revenue declining ({rg*100:.1f}% YoY)")
+        dil = _safe(r.growth.shares_growth_yoy, None)
+        if dil is not None and dil > 0.10:
+            risks.append(f"Heavy share dilution ({dil*100:.1f}%/yr)")
+
+    if r.moat is not None:
+        ms = _safe(r.moat.moat_score, None)
+        if ms is not None and ms < 25:
+            risks.append("No economic moat detected")
 
     return risks[:5]
 

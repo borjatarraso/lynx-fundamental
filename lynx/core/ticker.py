@@ -223,12 +223,9 @@ def _try_direct_ticker(symbol: str) -> Optional[str]:
     """Try to look up a symbol directly via yfinance Ticker.
 
     Returns the symbol if it has valid data (price or name), else None.
-    Suppresses stderr noise from yfinance HTTP 404s using per-logger
-    level adjustment (thread-safe) instead of global logging.disable().
+    Suppresses noise from yfinance HTTP 404s using logger-level adjustment.
     """
     import logging
-    import io
-    import os
 
     # Suppress yfinance/urllib3 loggers at the logger level (thread-safe)
     _loggers_to_suppress = ["yfinance", "peewee", "urllib3", "urllib3.connectionpool"]
@@ -238,11 +235,6 @@ def _try_direct_ticker(symbol: str) -> Optional[str]:
         saved_levels[name] = logger.level
         logger.setLevel(logging.CRITICAL + 1)
 
-    # Redirect stderr at the fd level to suppress C-extension noise
-    old_stderr_fd = os.dup(2)
-    devnull = os.open(os.devnull, os.O_WRONLY)
-    os.dup2(devnull, 2)
-    os.close(devnull)
     try:
         t = yf.Ticker(symbol)
         info = t.info
@@ -266,8 +258,6 @@ def _try_direct_ticker(symbol: str) -> Optional[str]:
     except Exception:
         pass
     finally:
-        os.dup2(old_stderr_fd, 2)
-        os.close(old_stderr_fd)
         for name, level in saved_levels.items():
             logging.getLogger(name).setLevel(level)
 

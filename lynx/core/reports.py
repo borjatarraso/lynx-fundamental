@@ -18,7 +18,7 @@ DOWNLOAD_HEADERS = {
 
 # SEC EDGAR requires a User-Agent with contact email
 EDGAR_HEADERS = {
-    "User-Agent": "LynxFA/0.1 lynx-fa-research@example.com",
+    "User-Agent": "LynxFA/0.1 lynx-fundamental-research@example.com",
     "Accept-Encoding": "gzip, deflate",
 }
 
@@ -123,6 +123,8 @@ def _fetch_via_edgar(ticker: str) -> list[Filing]:
 
     for i, form in enumerate(forms):
         if form not in TARGET_FORMS:
+            continue
+        if i >= len(accessions):
             continue
         accession = accessions[i].replace("-", "")
         doc = primary_docs[i] if i < len(primary_docs) else ""

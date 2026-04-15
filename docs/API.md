@@ -1,6 +1,6 @@
-# Lynx FA — Python API Reference
+# lynx-fundamental — Python API Reference
 
-Lynx FA can be used as a Python library in addition to the CLI. This document covers the public API.
+lynx-fundamental can be used as a Python library in addition to the CLI. This document covers the public API.
 
 ## Quick Example
 
@@ -58,6 +58,27 @@ def run_full_analysis(
 - `refresh=True`: Ignores any cached data. Fetches everything fresh from the network. Overwrites the cache.
 
 **Raises:** `ValueError` if the identifier cannot be resolved.
+
+#### `run_progressive_analysis(identifier, ..., on_progress) -> AnalysisReport`
+
+Progressive variant that calls `on_progress(stage, report)` after each stage completes, allowing UIs to render sections as data arrives.
+
+```python
+from lynx.core.analyzer import run_progressive_analysis
+
+def on_progress(stage: str, report):
+    print(f"Stage complete: {stage}")
+
+report = run_progressive_analysis("AAPL", on_progress=on_progress)
+```
+
+**Stages emitted** (in order): `profile`, `financials`, `valuation`, `profitability`, `solvency`, `growth`, `moat`, `intrinsic_value`, `filings`, `news`, `conclusion`, `complete`.
+
+The report is built incrementally — metric sections are `None` until their stage completes. Filings and news are fetched in parallel via `ThreadPoolExecutor`.
+
+**ISIN auto-retrieval:** During analysis, the ISIN is automatically fetched from yfinance when not already known from the identifier resolution step.
+
+If `on_progress` is `None`, behaves identically to `run_full_analysis`.
 
 ---
 
@@ -232,6 +253,27 @@ rel = get_relevance("cash_burn_rate", CompanyTier.MICRO, "solvency")
 # -> Relevance.CRITICAL
 ```
 
+### `lynx.metrics.sector_insights`
+
+Provides sector and industry-specific analysis guidance: critical metrics, key risks, what to watch, and typical valuation ranges.
+
+```python
+from lynx.metrics.sector_insights import (
+    get_sector_insight,    # (sector: str) -> SectorInsight | None
+    get_industry_insight,  # (industry: str) -> IndustryInsight | None
+    list_sectors,          # () -> list[str]
+    list_industries,       # () -> list[str]
+)
+
+s = get_sector_insight("Technology")
+# -> SectorInsight(sector="Technology", overview="...", critical_metrics=[...], ...)
+
+i = get_industry_insight("Consumer Electronics")
+# -> IndustryInsight(industry="Consumer Electronics", ...)
+```
+
+**Coverage:** 11 sectors, 16 industries. Lookups are case-insensitive. Returns `None` for unrecognized sectors/industries.
+
 ---
 
 ## Data Models
@@ -272,23 +314,25 @@ class Relevance(str, Enum):
 
 #### `AnalysisReport`
 
-Top-level container returned by `run_full_analysis()`:
+Top-level container returned by `run_full_analysis()` / `run_progressive_analysis()`.
+
+Metric sections default to `None` so the report can be built incrementally during progressive analysis. After a complete analysis, all fields are populated.
 
 ```python
 @dataclass
 class AnalysisReport:
-    profile: CompanyProfile
-    valuation: ValuationMetrics
-    profitability: ProfitabilityMetrics
-    solvency: SolvencyMetrics
-    growth: GrowthMetrics
-    efficiency: EfficiencyMetrics
-    moat: MoatIndicators
-    intrinsic_value: IntrinsicValue
-    financials: list[FinancialStatement]
-    filings: list[Filing]
-    news: list[NewsArticle]
-    fetched_at: str
+    profile: CompanyProfile                        # always present
+    valuation: Optional[ValuationMetrics] = None
+    profitability: Optional[ProfitabilityMetrics] = None
+    solvency: Optional[SolvencyMetrics] = None
+    growth: Optional[GrowthMetrics] = None
+    efficiency: Optional[EfficiencyMetrics] = None
+    moat: Optional[MoatIndicators] = None
+    intrinsic_value: Optional[IntrinsicValue] = None
+    financials: list[FinancialStatement]            # default: []
+    filings: list[Filing]                           # default: []
+    news: list[NewsArticle]                         # default: []
+    fetched_at: str                                 # ISO timestamp
 ```
 
 #### Key Metric Models
@@ -314,13 +358,27 @@ class AnalysisReport:
 
 #### `display_full_report(report: AnalysisReport) -> None`
 
-Renders the complete analysis to the terminal using Rich. Output is tier-aware: critical metrics are highlighted with `*`, irrelevant metrics are hidden, thresholds shift by tier.
+Renders the complete analysis to the terminal using Rich. Output is tier-aware: critical metrics are highlighted with `*`, irrelevant metrics are hidden, thresholds shift by tier. Handles partial reports gracefully — sections with `None` metrics are skipped.
+
+#### `display_report_stage(stage: str, report: AnalysisReport) -> None`
+
+Renders a single stage of the report (progressive mode). Use as the `on_progress` callback for `run_progressive_analysis`:
+
+```python
+from lynx.core.analyzer import run_progressive_analysis
+from lynx.display import display_report_stage
+
+report = run_progressive_analysis("AAPL", on_progress=display_report_stage)
+```
 
 Individual sections can be called directly:
 
 ```python
 from lynx.display import (
     display_full_report,
+    display_report_stage,
+    _display_header,
+    _display_profile,
     _display_valuation,
     _display_profitability,
     _display_solvency,
@@ -362,7 +420,7 @@ about = get_about_text()
 
 | Mode | How to access |
 |------|---------------|
-| Console (CLI) | `lynx-fa --about` |
+| Console (CLI) | `lynx-fundamental --about` |
 | Interactive | Type `about` at the prompt |
 | Textual UI | Press **F1** |
 | Graphical UI | Click **About** button in toolbar |
@@ -385,4 +443,60 @@ about = get_about_text()
 | Graphical UI | Click **Open** button on news row |
 
 The TUI and GUI show a confirmation dialog after opening news in the browser. The dialog includes a "Do not show again" option that suppresses it for the rest of the session. The flag resets when the application is restarted.
+
+---
+
+## TUI Themes
+
+The Textual UI supports 7 color themes, cycled with the `T` key:
+
+| Theme | Style |
+|-------|-------|
+| `lynx-dark` | Default dark theme (Catppuccin Mocha) |
+| `hacker` | Green-on-black terminal aesthetic |
+| `dracula` | Purple/pink Dracula color palette |
+| `solarized` | Solarized Dark |
+| `lynx-light` | Light theme with blue accents |
+| `textual-dark` | Textual built-in dark |
+| `textual-light` | Textual built-in light |
+
+### Programmatic Theme Registration
+
+```python
+from lynx.tui.themes import CUSTOM_THEMES, THEME_NAMES, register_all_themes
+
+# THEME_NAMES lists all theme names in cycle order
+print(THEME_NAMES)
+
+# register_all_themes(app) registers custom themes on a Textual App
+```
+
+---
+
+## Collapsible Layout
+
+Both the TUI and GUI use collapsible sections for the analysis report:
+
+- **Company Profile** is expanded by default with a split layout (metrics left, description right)
+- All other sections (Valuation, Profitability, Solvency, Growth, Moat, Intrinsic Value, Conclusion, Financials, Filings, News) start collapsed
+- Click or toggle to expand/collapse individual sections
+
+### Metric Explanations
+
+Both TUI and GUI provide inline access to metric explanations:
+
+| Mode | How to access |
+|------|---------------|
+| TUI | Select a metric row, press `I` to see explanation |
+| GUI | Click the `?` button on any metric row |
+| Interactive | Type `explain <metric_key>` |
+| Console CLI | `lynx-fundamental --explain <metric_key>` |
+
+Explanation data is stored in `lynx/metrics/explanations.py` and includes: full name, description, formula, why it matters, and category.
+
+### GUI Branding
+
+The GUI displays the Lynx logo in two locations:
+- `img/logo_sm_quarter_green.png` in the top-left toolbar
+- `img/logo_sm_green.png` in the About dialog
 ```

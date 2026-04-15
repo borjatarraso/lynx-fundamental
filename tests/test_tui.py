@@ -102,6 +102,77 @@ class TestLynxAppStructure:
         binding_keys = [b.key for b in LynxApp.BINDINGS]
         assert "f1" in binding_keys
 
+    def test_bindings_include_theme(self):
+        binding_keys = [b.key for b in LynxApp.BINDINGS]
+        assert "t" in binding_keys
+
     def test_suppress_flag_default(self):
         # Check class attribute default
         assert LynxApp._suppress_news_dialog is False
+
+    def test_theme_index_default(self):
+        assert LynxApp._theme_index == 0
+
+
+class TestNaNHandling:
+    def test_num_nan(self):
+        assert _num(float("nan")) == "N/A"
+
+    def test_pct_nan(self):
+        assert _pct(float("nan")) == "N/A"
+
+    def test_pctplain_nan(self):
+        assert _pctplain(float("nan")) == "N/A"
+
+    def test_money_nan(self):
+        assert _money(float("nan")) == "N/A"
+
+
+class TestThemes:
+    def test_theme_names_nonempty(self):
+        from lynx.tui.themes import THEME_NAMES
+        assert len(THEME_NAMES) >= 5
+
+    def test_theme_names_includes_customs(self):
+        from lynx.tui.themes import THEME_NAMES
+        assert "lynx-dark" in THEME_NAMES
+        assert "hacker" in THEME_NAMES
+        assert "dracula" in THEME_NAMES
+        assert "solarized" in THEME_NAMES
+        assert "lynx-light" in THEME_NAMES
+
+    def test_theme_names_includes_builtins(self):
+        from lynx.tui.themes import THEME_NAMES
+        assert "textual-dark" in THEME_NAMES
+        assert "textual-light" in THEME_NAMES
+
+    def test_custom_themes_valid(self):
+        from lynx.tui.themes import CUSTOM_THEMES
+        for theme in CUSTOM_THEMES:
+            assert theme.name
+            assert theme.primary
+            assert theme.background
+            assert theme.surface
+
+    def test_custom_themes_have_dark_flag(self):
+        from lynx.tui.themes import CUSTOM_THEMES
+        dark_themes = [t for t in CUSTOM_THEMES if t.dark]
+        light_themes = [t for t in CUSTOM_THEMES if not t.dark]
+        assert len(dark_themes) >= 4
+        assert len(light_themes) >= 1
+
+    def test_register_function_exists(self):
+        from lynx.tui.themes import register_all_themes
+        assert callable(register_all_themes)
+
+    def test_profile_table_builder(self):
+        from lynx.tui.app import _build_profile_table
+        assert callable(_build_profile_table)
+
+    def test_metric_info_binding(self):
+        binding_keys = [b.key for b in LynxApp.BINDINGS]
+        assert "i" in binding_keys
+
+    def test_rm_helper_exists(self):
+        from lynx.tui.app import _rm
+        assert callable(_rm)
