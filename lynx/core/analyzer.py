@@ -77,16 +77,23 @@ def run_full_analysis(
         console.print(f"[bold green]Using cached data[/] [dim](fetched {age_str})[/]")
         cached = load_cached_report(ticker)
         if cached:
-            report = _dict_to_report(cached)
-            if isin and report.profile.isin is None:
-                report.profile.isin = isin
-            console.print(
-                f"[green]{report.profile.name}[/] — "
-                f"{report.profile.sector or 'N/A'} / {report.profile.industry or 'N/A'}"
-                f"  [bold][{_tier_color(report.profile.tier)}]{report.profile.tier.value}[/]"
-            )
-            console.print("[dim]Use --refresh to force fresh data download.[/]")
-            return report
+            try:
+                report = _dict_to_report(cached)
+            except Exception as exc:
+                console.print(
+                    f"[yellow]Cached data is corrupt ({exc}), re-fetching...[/]"
+                )
+                cached = None
+            else:
+                if isin and report.profile.isin is None:
+                    report.profile.isin = isin
+                console.print(
+                    f"[green]{report.profile.name}[/] — "
+                    f"{report.profile.sector or 'N/A'} / {report.profile.industry or 'N/A'}"
+                    f"  [bold][{_tier_color(report.profile.tier)}]{report.profile.tier.value}[/]"
+                )
+                console.print("[dim]Use --refresh to force fresh data download.[/]")
+                return report
 
     # 3. Fresh fetch from network
     if refresh:

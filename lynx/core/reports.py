@@ -145,7 +145,7 @@ def download_filing(ticker: str, filing: Filing, max_size_mb: int = 20) -> Optio
         return None
 
     rdir = get_reports_dir(ticker)
-    safe_date = filing.filing_date.replace("-", "")
+    safe_date = (filing.filing_date or "unknown").replace("-", "")
     filename = f"{filing.form_type.replace('/', '_')}_{safe_date}"
 
     try:

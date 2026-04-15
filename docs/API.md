@@ -332,3 +332,38 @@ from lynx.display import (
     _display_news,
 )
 ```
+
+---
+
+## About API
+
+### `lynx.get_about_text() -> dict`
+
+Returns structured about information including author, license, and description. Used by all interfaces (console, interactive, TUI, GUI) to display consistent about/license information.
+
+```python
+from lynx import get_about_text, LICENSE_TEXT, __author__, __author_email__, __license__
+
+about = get_about_text()
+# Returns:
+# {
+#     "name": "Lynx Fundamental Analysis",
+#     "version": "0.1.0",
+#     "author": "Borja Tarraso",
+#     "email": "borja.tarraso@member.fsf.org",
+#     "year": "2026",
+#     "license": "BSD-3-Clause",
+#     "license_text": "BSD 3-Clause License\n\nCopyright (c) ...",
+#     "description": "Value investing research tool ...",
+# }
+```
+
+### Accessing About from each mode
+
+| Mode | How to access |
+|------|---------------|
+| Console (CLI) | `lynx-fa --about` |
+| Interactive | Type `about` at the prompt |
+| Textual UI | Press **F1** |
+| Graphical UI | Click **About** button in toolbar |
+```

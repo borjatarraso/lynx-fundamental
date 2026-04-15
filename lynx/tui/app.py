@@ -22,6 +22,39 @@ from lynx.models import AnalysisReport, CompanyTier
 
 
 # ======================================================================
+# About modal
+# ======================================================================
+
+class AboutModal(ModalScreen):
+    BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
+
+    def compose(self) -> ComposeResult:
+        from lynx import get_about_text
+        about = get_about_text()
+        with Vertical(id="about-dialog"):
+            yield Label(
+                f"[bold blue]{about['name']}[/]",
+                id="about-title",
+            )
+            yield Static(
+                f"Version {about['version']} ({about['year']})\n\n"
+                f"[bold]Developed by:[/] {about['author']}\n"
+                f"[bold]Contact:[/]      {about['email']}\n"
+                f"[bold]License:[/]      {about['license']}\n\n"
+                f"{about['description']}\n\n"
+                f"[dim]{about['license_text']}[/]",
+                id="about-content",
+            )
+            yield Label(
+                "[dim]Press Escape to close[/]",
+                id="about-hint",
+            )
+
+    def action_dismiss_modal(self) -> None:
+        self.dismiss()
+
+
+# ======================================================================
 # Search modal
 # ======================================================================
 
@@ -41,7 +74,10 @@ class SearchModal(ModalScreen[str]):
             )
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        self.dismiss(event.value.strip() if event.value else "")
+        value = (event.value or "").strip()
+        if len(value) > 100:
+            value = value[:100]
+        self.dismiss(value)
 
     def action_dismiss_modal(self) -> None:
         self.dismiss("")
@@ -136,6 +172,27 @@ class LynxApp(App):
     ReportView {
         height: 1fr;
     }
+    #about-dialog {
+        width: 80;
+        height: auto;
+        max-height: 40;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+        margin: 2 4;
+    }
+    #about-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    #about-content {
+        margin: 0 2;
+    }
+    #about-hint {
+        text-align: center;
+        margin-top: 1;
+    }
     """
 
     BINDINGS = [
@@ -143,6 +200,7 @@ class LynxApp(App):
         Binding("q", "quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
         Binding("d", "dark", "Toggle Dark"),
+        Binding("f1", "about", "About"),
     ]
 
     report: AnalysisReport | None = None
@@ -158,6 +216,9 @@ class LynxApp(App):
             id="status-area",
         )
         yield Footer()
+
+    def action_about(self) -> None:
+        self.push_screen(AboutModal())
 
     def action_analyze(self) -> None:
         self.push_screen(SearchModal(), self._on_search_result)

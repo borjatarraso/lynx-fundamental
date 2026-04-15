@@ -16,8 +16,11 @@ from lynx.models import (
 
 def fetch_company_profile(ticker: str) -> CompanyProfile:
     """Fetch company profile information."""
-    t = yf.Ticker(ticker)
-    info = t.info or {}
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info or {}
+    except Exception:
+        info = {}
     return CompanyProfile(
         ticker=ticker.upper(),
         name=info.get("longName") or info.get("shortName", ticker),
@@ -35,21 +38,45 @@ def fetch_company_profile(ticker: str) -> CompanyProfile:
 
 def fetch_info(ticker: str) -> dict:
     """Fetch raw yfinance info dict for a ticker."""
-    t = yf.Ticker(ticker)
-    return t.info or {}
+    try:
+        t = yf.Ticker(ticker)
+        return t.info or {}
+    except Exception:
+        return {}
 
 
 def fetch_financial_statements(ticker: str) -> list[FinancialStatement]:
     """Fetch income statement, balance sheet, and cash flow data."""
-    t = yf.Ticker(ticker)
+    try:
+        t = yf.Ticker(ticker)
+    except Exception:
+        return []
     statements: list[FinancialStatement] = []
 
-    income = _safe_df(t.financials)
-    quarterly_income = _safe_df(t.quarterly_financials)
-    balance = _safe_df(t.balance_sheet)
-    quarterly_balance = _safe_df(t.quarterly_balance_sheet)
-    cashflow = _safe_df(t.cashflow)
-    quarterly_cashflow = _safe_df(t.quarterly_cashflow)
+    try:
+        income = _safe_df(t.financials)
+    except Exception:
+        income = None
+    try:
+        quarterly_income = _safe_df(t.quarterly_financials)
+    except Exception:
+        quarterly_income = None
+    try:
+        balance = _safe_df(t.balance_sheet)
+    except Exception:
+        balance = None
+    try:
+        quarterly_balance = _safe_df(t.quarterly_balance_sheet)
+    except Exception:
+        quarterly_balance = None
+    try:
+        cashflow = _safe_df(t.cashflow)
+    except Exception:
+        cashflow = None
+    try:
+        quarterly_cashflow = _safe_df(t.quarterly_cashflow)
+    except Exception:
+        quarterly_cashflow = None
 
     # Save raw data
     fdir = get_financials_dir(ticker)
@@ -120,8 +147,11 @@ def fetch_financial_statements(ticker: str) -> list[FinancialStatement]:
 
 def fetch_historical_prices(ticker: str, period: str = "5y") -> Optional[pd.DataFrame]:
     """Fetch historical price data."""
-    t = yf.Ticker(ticker)
-    hist = t.history(period=period)
+    try:
+        t = yf.Ticker(ticker)
+        hist = t.history(period=period)
+    except Exception:
+        return None
     if hist is not None and not hist.empty:
         fdir = get_financials_dir(ticker)
         save_json(fdir / "price_history.json", {

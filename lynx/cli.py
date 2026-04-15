@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from lynx import __author__, __version__, __year__
+from lynx import __author__, __author_email__, __license__, __version__, __year__
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -116,9 +116,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip fetching news articles",
     )
+    def _positive_int(value: str) -> int:
+        n = int(value)
+        if n <= 0:
+            raise argparse.ArgumentTypeError(f"{value} is not a positive integer")
+        return n
+
     parser.add_argument(
         "--max-filings",
-        type=int,
+        type=_positive_int,
         default=10,
         metavar="N",
         help="Maximum number of filings to download (default: 10)",
@@ -133,6 +139,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="version",
         version=f"%(prog)s {__version__} ({__year__}) by {__author__}",
     )
+    parser.add_argument(
+        "--about",
+        action="store_true",
+        help="Show about information, author, and license",
+    )
 
     return parser
 
@@ -140,6 +151,13 @@ def build_parser() -> argparse.ArgumentParser:
 def run_cli() -> None:
     """Parse arguments and dispatch to the appropriate mode."""
     parser = build_parser()
+
+    # Allow --about and --version without requiring -p/-t
+    if "--about" in sys.argv:
+        from rich.console import Console
+        _cmd_about(Console(stderr=True))
+        return
+
     args = parser.parse_args()
 
     from rich.console import Console
@@ -219,9 +237,16 @@ def run_cli() -> None:
     except ValueError as e:
         errc.print(f"[bold red]Error:[/] {e}")
         sys.exit(1)
+    except (ConnectionError, TimeoutError, OSError) as e:
+        errc.print(f"[bold red]Network error:[/] {e}")
+        errc.print("[dim]Check your internet connection and try again.[/]")
+        sys.exit(1)
     except KeyboardInterrupt:
         print("\nAborted.")
         sys.exit(130)
+    except Exception as e:
+        errc.print(f"[bold red]Unexpected error:[/] {type(e).__name__}: {e}")
+        sys.exit(1)
 
 
 # ---- Cache CLI helpers ----
@@ -268,6 +293,30 @@ def _cmd_list_cache(con) -> None:
 
     con.print(t)
     con.print(f"[dim]Total: {len(tickers)} tickers cached[/]")
+
+
+def _cmd_about(con) -> None:
+    from rich.panel import Panel
+    from lynx import get_about_text
+
+    about = get_about_text()
+    con.print()
+    con.print(Panel(
+        f"[bold blue]{about['name']}[/]\n"
+        f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
+        f"[bold]Developed by:[/] {about['author']}\n"
+        f"[bold]Contact:[/]      {about['email']}\n"
+        f"[bold]License:[/]      {about['license']}\n\n"
+        f"[dim]{about['description']}[/]",
+        title="[bold]About[/]",
+        border_style="blue",
+    ))
+    con.print(Panel(
+        about["license_text"],
+        title="[bold]BSD 3-Clause License[/]",
+        border_style="dim",
+    ))
+    con.print()
 
 
 def _cmd_drop_cache(con, target: str) -> None:

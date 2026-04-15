@@ -14,7 +14,10 @@ from lynx.models import NewsArticle
 
 def fetch_news_yfinance(ticker: str) -> list[NewsArticle]:
     """Fetch news from Yahoo Finance via yfinance."""
-    t = yf.Ticker(ticker)
+    try:
+        t = yf.Ticker(ticker)
+    except Exception:
+        return []
     articles: list[NewsArticle] = []
 
     try:

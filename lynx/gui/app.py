@@ -404,6 +404,16 @@ class LynxFAGUI:
         )
         self.btn_collapse.pack(side=tk.RIGHT, padx=(2, 0))
 
+        # About button (right side, before expand/collapse)
+        self.btn_about = tk.Button(
+            toolbar, text="  About  ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._on_about,
+        )
+        self.btn_about.pack(side=tk.RIGHT, padx=(8, 0))
+
         # Bind Enter key
         self.entry_ticker.bind("<Return>", lambda _: self._on_analyze())
         # Bind Escape to clear
@@ -518,6 +528,84 @@ class LynxFAGUI:
         self._show_welcome()
         self.entry_ticker.focus_set()
 
+    def _on_about(self) -> None:
+        from lynx import get_about_text
+        about = get_about_text()
+
+        win = tk.Toplevel(self.root)
+        win.title(f"{DIAMOND} About Lynx FA")
+        win.configure(bg=BG)
+        win.geometry("620x560")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+
+        # Title
+        tk.Label(
+            win, text=f"{DIAMOND}  {about['name']}  {DIAMOND}",
+            font=(_FAMILY, 18, "bold"), bg=BG, fg=ACCENT,
+        ).pack(pady=(24, 4))
+
+        tk.Label(
+            win, text=f"Version {about['version']} ({about['year']})",
+            font=FONT_SMALL, bg=BG, fg=FG_DIM,
+        ).pack(pady=(0, 16))
+
+        # Author info
+        info_frame = tk.Frame(win, bg=BG_CARD, padx=20, pady=12)
+        info_frame.pack(fill=tk.X, padx=24, pady=(0, 12))
+
+        for label, value in [
+            ("Developed by", about["author"]),
+            ("Contact", about["email"]),
+            ("License", about["license"]),
+        ]:
+            row = tk.Frame(info_frame, bg=BG_CARD)
+            row.pack(fill=tk.X, pady=2)
+            tk.Label(
+                row, text=f"{label}:", font=FONT_BOLD,
+                bg=BG_CARD, fg=ACCENT, width=14, anchor=tk.E,
+            ).pack(side=tk.LEFT, padx=(0, 8))
+            tk.Label(
+                row, text=value, font=FONT,
+                bg=BG_CARD, fg=FG, anchor=tk.W,
+            ).pack(side=tk.LEFT)
+
+        # Description
+        tk.Label(
+            win, text=about["description"], font=FONT_SMALL,
+            bg=BG, fg=FG_DIM, wraplength=560, justify=tk.CENTER,
+        ).pack(padx=24, pady=(0, 12))
+
+        # License text in scrollable frame
+        license_frame = tk.Frame(win, bg=BG_CARD)
+        license_frame.pack(fill=tk.BOTH, expand=True, padx=24, pady=(0, 12))
+
+        tk.Label(
+            license_frame, text="BSD 3-Clause License",
+            font=FONT_SMALL_BOLD, bg=BG_CARD, fg=ACCENT,
+        ).pack(pady=(8, 4))
+
+        license_text = tk.Text(
+            license_frame, font=FONT_SMALL, bg=BG_CARD, fg=FG_DIM,
+            wrap=tk.WORD, relief=tk.FLAT, height=12,
+            highlightthickness=0, padx=12, pady=4,
+        )
+        license_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        license_text.insert("1.0", about["license_text"])
+        license_text.configure(state=tk.DISABLED)
+
+        # Close button
+        tk.Button(
+            win, text="  Close  ", font=FONT_BTN,
+            bg=BTN_BG, fg=BTN_FG,
+            activebackground=BTN_ACTIVE, activeforeground=BTN_FG,
+            relief=tk.FLAT, padx=16, pady=4, cursor="hand2",
+            command=win.destroy,
+        ).pack(pady=(0, 16))
+
+        win.bind("<Escape>", lambda _: win.destroy())
+
     def _toggle_all(self, expand: bool) -> None:
         for card in self._sections:
             if expand and not card.expanded:
@@ -546,14 +634,18 @@ class LynxFAGUI:
             self.root.after(0, self._display_report, report)
 
         except Exception as e:
-            self.root.after(
-                0, lambda: (
-                    self.status_var.set(f"{WARN_ICON}  Error"),
-                    self.btn_analyze.configure(state=tk.NORMAL),
-                    self.btn_clear.configure(state=tk.NORMAL),
-                    messagebox.showerror("Analysis Error", str(e)),
-                ),
-            )
+            msg = str(e) or type(e).__name__
+            try:
+                self.root.after(
+                    0, lambda: (
+                        self.status_var.set(f"{WARN_ICON}  Error"),
+                        self.btn_analyze.configure(state=tk.NORMAL),
+                        self.btn_clear.configure(state=tk.NORMAL),
+                        messagebox.showerror("Analysis Error", msg),
+                    ),
+                )
+            except tk.TclError:
+                pass  # Root window was destroyed
 
     # ---- Display report --------------------------------------------------
 
@@ -1076,7 +1168,8 @@ class LynxFAGUI:
     # ---- Run -------------------------------------------------------------
 
     def run(self) -> None:
-        self.entry_ticker.focus_set()
+        if hasattr(self, "entry_ticker"):
+            self.entry_ticker.focus_set()
         self.root.mainloop()
 
 

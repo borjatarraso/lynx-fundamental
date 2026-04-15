@@ -38,7 +38,8 @@ In code, `set_mode("testing")` must be called before any storage operation. The 
 - `lynx/display.py` — Rich terminal output. Tier-aware: highlights critical metrics, dims irrelevant ones, adjusts thresholds.
 - `lynx/cli.py` — argparse CLI with `-p`/`-t` mode selection, `--refresh`, `--drop-cache`, `--list-cache`
 - `lynx/interactive.py` — Prompt-based interactive shell (mode-aware prompt and behavior)
-- `lynx/tui/app.py` — Textual terminal UI
+- `lynx/tui/app.py` — Textual terminal UI with About modal (F1)
+- `lynx/gui/app.py` — Tkinter graphical interface with About dialog
 
 ## Key Conventions
 
@@ -48,5 +49,7 @@ In code, `set_mode("testing")` must be called before any storage operation. The 
 - Tier classification is in `models.py:classify_tier()` — market cap boundaries are defined there
 - The relevance tables in `metrics/relevance.py` drive display behavior — add new metrics there
 - SEC EDGAR direct access may be blocked by IP/environment — yfinance `sec_filings` is the primary source
-- yfinance `Ticker.info` HTTP 404 noise is suppressed in `ticker.py:_try_direct_ticker()`
+- yfinance `Ticker.info` HTTP 404 noise is suppressed in `ticker.py:_try_direct_ticker()` using thread-safe per-logger level adjustment
 - When writing tests, always call `set_mode("testing")` at the start to avoid touching production data
+- About information is centralized in `lynx/__init__.py:get_about_text()` — all modes (console, interactive, TUI, GUI) use this single source
+- License: BSD 3-Clause. See `LICENSE` file and `lynx/__init__.py:LICENSE_TEXT`

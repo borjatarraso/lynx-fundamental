@@ -46,6 +46,7 @@ MENU = """
   [bold]drop-cache all[/]              Remove all cached data
 
 [bold cyan]Other:[/]
+  [bold]about[/]                       Show about, author, and license
   [bold]help[/]                        Show this menu
   [bold]quit[/]                        Exit
 """
@@ -100,9 +101,16 @@ def run_interactive() -> None:
         elif cmd == "help":
             console.print(MENU)
 
+        elif cmd == "about":
+            _show_about()
+
         elif cmd == "search":
-            if not arg:
-                arg = Prompt.ask("[bold]Search query (company name, ticker, ISIN)[/]")
+            try:
+                if not arg:
+                    arg = Prompt.ask("[bold]Search query (company name, ticker, ISIN)[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
+                continue
             if not arg:
                 console.print("[red]No query provided.[/]")
                 continue
@@ -116,8 +124,12 @@ def run_interactive() -> None:
 
         elif cmd in ("analyze", "refresh"):
             force_refresh = (cmd == "refresh") or is_testing()
-            if not arg:
-                arg = Prompt.ask("[bold]Enter ticker, ISIN, or company name[/]")
+            try:
+                if not arg:
+                    arg = Prompt.ask("[bold]Enter ticker, ISIN, or company name[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
+                continue
             if not arg:
                 console.print("[red]No identifier provided.[/]")
                 continue
@@ -131,8 +143,13 @@ def run_interactive() -> None:
                 display_full_report(current_report)
             except ValueError as e:
                 console.print(f"[bold red]Error:[/] {e}")
+            except (ConnectionError, TimeoutError, OSError) as e:
+                console.print(f"[bold red]Network error:[/] {e}")
+                console.print("[dim]Check your connection and try again.[/]")
+            except KeyboardInterrupt:
+                console.print("[dim]Analysis cancelled.[/]")
             except Exception as e:
-                console.print(f"[bold red]Unexpected error:[/] {e}")
+                console.print(f"[bold red]Unexpected error:[/] {type(e).__name__}: {e}")
 
         elif cmd == "metrics":
             if not current_report:
@@ -163,8 +180,10 @@ def run_interactive() -> None:
                         console.print("[red]Download failed.[/]")
                 else:
                     console.print(f"[red]Invalid index. Choose 1-{len(current_report.filings)}[/]")
-            except ValueError:
+            except (ValueError, TypeError):
                 console.print("[red]Provide a valid number.[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
 
         elif cmd == "news":
             if not current_report or not current_report.news:
@@ -189,8 +208,10 @@ def run_interactive() -> None:
                         console.print("[red]Download failed.[/]")
                 else:
                     console.print(f"[red]Invalid index. Choose 1-{len(current_report.news)}[/]")
-            except ValueError:
+            except (ValueError, TypeError):
                 console.print("[red]Provide a valid number.[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
 
         elif cmd == "summary":
             if not current_report:
@@ -212,8 +233,12 @@ def run_interactive() -> None:
             _show_cache()
 
         elif cmd == "drop-cache":
-            if not arg:
-                arg = Prompt.ask("[bold]Ticker to drop (or 'all')[/]")
+            try:
+                if not arg:
+                    arg = Prompt.ask("[bold]Ticker to drop (or 'all')[/]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Cancelled.[/]")
+                continue
             if not arg:
                 console.print("[red]No ticker provided.[/]")
                 continue
@@ -266,6 +291,28 @@ def _show_cache() -> None:
         )
 
     console.print(t)
+
+
+def _show_about() -> None:
+    from lynx import get_about_text
+
+    about = get_about_text()
+    console.print()
+    console.print(Panel(
+        f"[bold blue]{about['name']}[/]\n"
+        f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
+        f"[bold]Developed by:[/] {about['author']}\n"
+        f"[bold]Contact:[/]      {about['email']}\n"
+        f"[bold]License:[/]      {about['license']}\n\n"
+        f"[dim]{about['description']}[/]",
+        title="[bold]About[/]",
+        border_style="blue",
+    ))
+    console.print(Panel(
+        about["license_text"],
+        title="[bold]BSD 3-Clause License[/]",
+        border_style="dim",
+    ))
 
 
 def _drop_cache(target: str) -> None:

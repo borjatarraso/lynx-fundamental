@@ -13,7 +13,7 @@ A command-line tool for fundamental analysis focused on **value investing** and 
 - **Multi-exchange support** — US (NYSE, NASDAQ, OTC), Canada (TSXV, TSX), Europe (XETRA, LSE, Euronext), Asia-Pacific, and 30+ exchange suffixes
 - **ISIN and company name resolution** — search by ISIN, ticker, or free-text company name
 - **Local data cache** — production data under `data/`, test data under `data_test/` (fully isolated); cached analyses reused automatically in production mode, with `--refresh` to force update and `--drop-cache` to clean up
-- **Three interfaces** — direct CLI, interactive prompt mode (`-i`), and Textual terminal UI (`-tui`)
+- **Four interfaces** — direct CLI (console), interactive prompt mode (`-i`), Textual terminal UI (`-tui`), and graphical interface (`-x`)
 
 ## Installation
 
@@ -80,10 +80,10 @@ lynx-fa -p GOOG --no-reports --no-news
 ## CLI Reference
 
 ```
-usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s] [--refresh]
+usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s | -x] [--refresh]
                [--drop-cache [TICKER]] [--list-cache] [--no-reports]
                [--no-news] [--max-filings N] [--verbose] [--version]
-               [identifier]
+               [--about] [identifier]
 ```
 
 | Flag | Description |
@@ -93,6 +93,7 @@ usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s] [--refresh]
 | `identifier` | Ticker symbol, ISIN, or company name |
 | `-i`, `--interactive-mode` | Launch interactive prompt mode |
 | `-tui`, `--textual-ui` | Launch Textual terminal UI |
+| `-x`, `--gui` | Launch graphical user interface (Tkinter) |
 | `-s`, `--search` | Search for a company across exchanges |
 | `--refresh` | Force fresh data download (production mode only) |
 | `--drop-cache TICKER` | Remove cached data for a ticker (or `ALL`) |
@@ -101,6 +102,7 @@ usage: lynx-fa [-h] (-p | -t) [-i | -tui | -s] [--refresh]
 | `--no-news` | Skip news fetching |
 | `--max-filings N` | Limit filing downloads (default: 10) |
 | `-v`, `--verbose` | Verbose output |
+| `--about` | Show about information, author, and license |
 
 ## Company Tier System
 
@@ -187,6 +189,7 @@ Launch with `lynx-fa -i`:
 | `cache` | List cached tickers |
 | `drop-cache <TICKER>` | Remove cached data |
 | `export` | Show data directory path |
+| `about` | Show about, author, and license |
 
 ## Project Structure
 
@@ -209,12 +212,34 @@ lynx-fa-analysis/
 │   ├── metrics/
 │   │   ├── calculator.py    # All metric calculations (tier-aware)
 │   │   └── relevance.py     # Metric relevance per company tier
-│   └── tui/
-│       └── app.py           # Textual terminal UI
+│   ├── tui/
+│   │   └── app.py           # Textual terminal UI
+│   └── gui/
+│       └── app.py           # Tkinter graphical interface
 ├── data/                    # Production data storage (gitignored)
 └── data_test/               # Testing data storage (gitignored)
 ```
 
+## Interfaces
+
+### Console Mode (default)
+Direct CLI analysis: `lynx-fa -p AAPL`
+
+### Interactive Mode (`-i`)
+REPL with commands: analyze, search, filings, news, summary, about, etc.
+
+### Textual UI (`-tui`)
+Full terminal UI with tabs, search modal, and keyboard navigation. Press **F1** for About.
+
+### Graphical Interface (`-x`)
+Tkinter-based GUI with collapsible sections, moat score bar, and About dialog.
+
+## About
+
+Use `lynx-fa --about` (console), `about` (interactive), **F1** (TUI), or the **About** button (GUI) to view author and license information.
+
 ## License
 
-This project is for research and educational purposes.
+BSD 3-Clause License. Copyright (c) 2026, Borja Tarraso <borja.tarraso@member.fsf.org>.
+
+See [LICENSE](LICENSE) for the full text.

@@ -612,28 +612,32 @@ def calc_intrinsic_value(
 
     # --- DCF (reliable for mid+ caps with positive FCF) ---
     if tier in (CompanyTier.MEGA, CompanyTier.LARGE, CompanyTier.MID):
-        if latest.free_cash_flow and latest.free_cash_flow > 0 and shares:
+        if latest.free_cash_flow and latest.free_cash_flow > 0 and shares and shares > 0:
             fcf = latest.free_cash_flow
             growth_rate = min(growth.revenue_cagr_3y or 0.05, 0.20)
+            growth_rate = max(growth_rate, 0.0)  # Ensure non-negative
 
             # Higher discount for smaller companies
             dr = discount_rate
             if tier == CompanyTier.MID:
                 dr = 0.12
 
-            total_pv = 0.0
-            projected_fcf = fcf
-            for year in range(1, 11):
-                yr_growth = growth_rate - (growth_rate - terminal_growth) * (year / 10)
-                projected_fcf *= (1 + yr_growth)
-                total_pv += projected_fcf / ((1 + dr) ** year)
+            if dr > terminal_growth:  # Guard against division by zero
+                total_pv = 0.0
+                projected_fcf = fcf
+                for year in range(1, 11):
+                    yr_growth = growth_rate - (growth_rate - terminal_growth) * (year / 10)
+                    projected_fcf *= (1 + yr_growth)
+                    total_pv += projected_fcf / ((1 + dr) ** year)
 
-            terminal_fcf = projected_fcf * (1 + terminal_growth)
-            terminal_value = terminal_fcf / (dr - terminal_growth)
-            pv_terminal = terminal_value / ((1 + dr) ** 10)
+                terminal_fcf = projected_fcf * (1 + terminal_growth)
+                terminal_value = terminal_fcf / (dr - terminal_growth)
+                pv_terminal = terminal_value / ((1 + dr) ** 10)
 
-            total_equity_value = total_pv + pv_terminal
-            iv.dcf_value = round(total_equity_value / shares, 2)
+                total_equity_value = total_pv + pv_terminal
+                dcf = total_equity_value / shares
+                if not math.isnan(dcf) and not math.isinf(dcf) and dcf > 0:
+                    iv.dcf_value = round(dcf, 2)
 
     # --- Graham Number (reliable for small+ caps with positive earnings) ---
     eps = latest.eps or (latest.net_income / shares if latest.net_income and shares else None)
@@ -703,7 +707,13 @@ def _calc_margin_history(statements: list[FinancialStatement]) -> list[Optional[
 def _cagr(start: Optional[float], end: Optional[float], years: int) -> Optional[float]:
     if not start or not end or start <= 0 or end <= 0 or years <= 0:
         return None
-    return (end / start) ** (1 / years) - 1
+    try:
+        result = (end / start) ** (1 / years) - 1
+        if math.isnan(result) or math.isinf(result):
+            return None
+        return result
+    except (ValueError, OverflowError, ZeroDivisionError):
+        return None
 
 
 def _std(values: list[float]) -> float:
