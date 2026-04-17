@@ -148,6 +148,81 @@ The conclusion scoring methodology (how weights work per tier, how category scor
 - **TUI**: Press `e` while focused on a conclusion row
 - **GUI**: Click the `?` button on the Assessment Conclusion section header
 
+## Running Tests
+
+The project has two test frameworks: **pytest** for unit/integration tests and **Robot Framework** for acceptance tests.
+
+### Prerequisites
+
+```bash
+pip install pytest                   # Unit tests
+pip install robotframework           # Acceptance tests
+```
+
+### Unit Tests (pytest)
+
+Run from the project root:
+
+```bash
+pytest                               # Run all tests (uses pyproject.toml config)
+pytest tests/                        # Explicit path
+pytest tests/ -v                     # Verbose output
+pytest tests/ -x                     # Stop on first failure
+pytest tests/test_progressive.py     # Run a specific test file
+pytest tests/ -k "test_safe"         # Run tests matching a pattern
+```
+
+Test files:
+
+| File | Coverage |
+|------|----------|
+| `tests/test_about.py` | Version, author, license metadata |
+| `tests/test_calculator.py` | All metric calculations |
+| `tests/test_cli.py` | CLI argument parsing |
+| `tests/test_conclusion.py` | Conclusion scoring, verdict, NaN safety |
+| `tests/test_display.py` | Display formatters and assessment functions |
+| `tests/test_explanations.py` | Metric explanation data |
+| `tests/test_export.py` | TXT, HTML, PDF export (PDF skipped if weasyprint missing) |
+| `tests/test_gui.py` | GUI widget construction and helpers |
+| `tests/test_models.py` | Data models and tier classification |
+| `tests/test_progressive.py` | Progressive analysis, partial reports, sector insights, ISIN, _safe() |
+| `tests/test_relevance.py` | Metric relevance per tier |
+| `tests/test_storage.py` | Cache and storage operations |
+| `tests/test_ticker.py` | Ticker/ISIN resolution |
+| `tests/test_tui.py` | TUI formatters, themes, widget builders |
+
+### Acceptance Tests (Robot Framework)
+
+Run from the project root:
+
+```bash
+robot robot/                         # Run all acceptance tests
+robot robot/cli_tests.robot          # CLI flag tests only
+robot robot/api_tests.robot          # Python API tests only
+robot robot/export_tests.robot       # Export format tests only
+```
+
+Output files are written to `robot/output/` (gitignored):
+- `output.xml` — machine-readable results
+- `log.html` — detailed execution log (open in browser)
+- `report.html` — summary report (open in browser)
+
+To specify a custom output directory:
+
+```bash
+robot --outputdir /tmp/robot_results robot/
+```
+
+Test suites:
+
+| File | Tests | Coverage | Network |
+|------|-------|----------|---------|
+| `robot/cli_tests.robot` | 17 | CLI flags, version, about, explain, explain-section, explain-conclusion, help | No |
+| `robot/api_tests.robot` | 11 | About API, tier classification, explanations, conclusion, ISIN, storage, calculators | No |
+| `robot/export_tests.robot` | 3 | TXT/HTML/PDF export, file creation, content validation | Yes (suite setup fetches AAPL) |
+
+**Note:** `export_tests.robot` requires network access during suite setup to fetch AAPL data. The other suites run entirely offline.
+
 ## Running the Program
 
 Run directly from the project root:

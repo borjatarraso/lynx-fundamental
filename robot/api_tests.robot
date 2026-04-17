@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation    API acceptance tests for Lynx FA Python API
+Documentation    API acceptance tests for lynx-fundamental Python API
 Library          Process
 
 
