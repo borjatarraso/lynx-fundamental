@@ -23,13 +23,28 @@ A command-line tool for fundamental analysis focused on **value investing** and 
 ## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/borjatarraso/lynx-fundamental.git
+cd lynx-fundamental
+
+# Install in editable mode (creates the `lynx-fundamental` command)
 pip install -e .
 ```
 
 ### Dependencies
 
-- Python >= 3.10
-- yfinance, requests, beautifulsoup4, rich, textual, feedparser, pandas, numpy
+| Package        | Purpose                              |
+|----------------|--------------------------------------|
+| yfinance       | Financial data from Yahoo Finance    |
+| requests       | HTTP calls (OpenFIGI, EDGAR, etc.)   |
+| beautifulsoup4 | HTML parsing for SEC filings         |
+| rich           | Terminal tables and formatting       |
+| textual        | Full-screen TUI framework            |
+| feedparser     | News RSS feed parsing                |
+| pandas         | Data analysis                        |
+| numpy          | Numerical computing                  |
+
+All dependencies are installed automatically via `pip install -e .`.
 
 ## Execution Modes
 
