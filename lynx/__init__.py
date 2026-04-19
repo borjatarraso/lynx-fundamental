@@ -38,6 +38,20 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE."""
 
 
+def get_logo_ascii() -> str:
+    """Load ASCII logo from img/logo_ascii.txt."""
+    import os
+    logo_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "img", "logo_ascii.txt",
+    )
+    try:
+        with open(logo_path, "r") as f:
+            return f.read().rstrip("\n")
+    except OSError:
+        return ""
+
+
 def get_about_text() -> dict:
     """Return structured about information."""
     return {

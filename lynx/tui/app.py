@@ -33,8 +33,10 @@ class AboutModal(ModalScreen):
     BINDINGS = [Binding("escape", "dismiss_modal", "Close")]
 
     def compose(self) -> ComposeResult:
-        from lynx import get_about_text
+        from lynx import get_about_text, get_logo_ascii
         about = get_about_text()
+        logo = get_logo_ascii()
+        logo_block = f"[green]{logo}[/]\n\n" if logo else ""
         with Vertical(id="about-dialog"):
             yield Label(
                 f"[bold blue]{about['name']}[/]",
@@ -42,6 +44,7 @@ class AboutModal(ModalScreen):
             )
             yield VerticalScroll(
                 Static(
+                    f"{logo_block}"
                     f"[dim]{about['suite']}[/]\n"
                     f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
                     f"[bold]Developed by:[/] {about['author']}\n"

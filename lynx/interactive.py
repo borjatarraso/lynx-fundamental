@@ -428,10 +428,16 @@ def _show_cache() -> None:
 
 
 def _show_about() -> None:
-    from lynx import get_about_text
+    from lynx import get_about_text, get_logo_ascii
 
     about = get_about_text()
+    logo = get_logo_ascii()
     console.print()
+    if logo:
+        console.print(Panel(
+            f"[green]{logo}[/]",
+            border_style="green",
+        ))
     console.print(Panel(
         f"[bold blue]{about['name']}[/]\n"
         f"[dim]{about['suite']}[/]\n"

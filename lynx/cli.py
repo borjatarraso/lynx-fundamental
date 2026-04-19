@@ -403,10 +403,16 @@ def _cmd_explain(con, metric: str | None) -> None:
 
 def _cmd_about(con) -> None:
     from rich.panel import Panel
-    from lynx import get_about_text
+    from lynx import get_about_text, get_logo_ascii
 
     about = get_about_text()
+    logo = get_logo_ascii()
     con.print()
+    if logo:
+        con.print(Panel(
+            f"[green]{logo}[/]",
+            border_style="green",
+        ))
     con.print(Panel(
         f"[bold blue]{about['name']}[/]\n"
         f"[dim]{about['suite']}[/]\n"
