@@ -6,6 +6,11 @@ __author_email__ = "borja.tarraso@member.fsf.org"
 __year__ = "2026"
 __license__ = "BSD-3-Clause"
 
+SUITE_NAME = "Lince Investor Suite"
+SUITE_VERSION = "2.0"
+SUITE_LABEL = f"{SUITE_NAME} v{SUITE_VERSION}"
+APP_NAME = "Lynx Fundamental Analysis"
+
 LICENSE_TEXT = """\
 BSD 3-Clause License
 
@@ -55,8 +60,10 @@ def get_logo_ascii() -> str:
 def get_about_text() -> dict:
     """Return structured about information."""
     return {
-        "name": "Lynx Fundamental Analysis",
-        "suite": "Lince Investor Suite",
+        "name": APP_NAME,
+        "suite": SUITE_NAME,
+        "suite_version": SUITE_VERSION,
+        "suite_label": SUITE_LABEL,
         "version": __version__,
         "author": __author__,
         "email": __author_email__,

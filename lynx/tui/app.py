@@ -45,8 +45,9 @@ class AboutModal(ModalScreen):
             yield VerticalScroll(
                 Static(
                     f"{logo_block}"
-                    f"[dim]{about['suite']}[/]\n"
-                    f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
+                    f"[bold blue]{about['name']} v{about['version']}[/]\n"
+                    f"[dim]Part of {about['suite']} v{about['suite_version']}[/]\n"
+                    f"[dim]Released {about['year']}[/]\n\n"
                     f"[bold]Developed by:[/] {about['author']}\n"
                     f"[bold]Contact:[/]      {about['email']}\n"
                     f"[bold]License:[/]      {about['license']}\n\n"

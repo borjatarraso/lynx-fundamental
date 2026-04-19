@@ -157,12 +157,18 @@ class SplashScreen:
         self.tagline.pack(pady=(0, 30))
 
         # Version
-        from lynx import __version__, __year__, __author__
+        from lynx import __version__, __year__, __author__, SUITE_LABEL
         self.version = tk.Label(
             center, text=f"v{__version__}  {BULLET}  {__year__}  {BULLET}  {__author__}",
             font=FONT_SPLASH_VER, bg=BG, fg=FG_SUBTLE,
         )
-        self.version.pack(pady=(0, 40))
+        self.version.pack(pady=(0, 4))
+
+        self.suite_label = tk.Label(
+            center, text=SUITE_LABEL,
+            font=FONT_SPLASH_VER, bg=BG, fg=FG_SUBTLE,
+        )
+        self.suite_label.pack(pady=(0, 40))
 
         # Loading bar
         self.bar_frame = tk.Frame(center, bg=BORDER, height=3, width=260)
@@ -847,12 +853,17 @@ class LynxFAGUI:
         ).pack(pady=(4, 4))
 
         tk.Label(
-            win, text=about['suite'],
-            font=FONT_SMALL, bg=BG, fg=ACCENT_DIM,
-        ).pack(pady=(0, 4))
+            win, text=f"Version {about['version']}",
+            font=FONT_SMALL, bg=BG, fg=FG_DIM,
+        ).pack(pady=(0, 2))
 
         tk.Label(
-            win, text=f"Version {about['version']} ({about['year']})",
+            win, text=f"Part of {about['suite']} v{about['suite_version']}",
+            font=FONT_SMALL, bg=BG, fg=ACCENT_DIM,
+        ).pack(pady=(0, 2))
+
+        tk.Label(
+            win, text=f"Released {about['year']}",
             font=FONT_SMALL, bg=BG, fg=FG_DIM,
         ).pack(pady=(0, 16))
 

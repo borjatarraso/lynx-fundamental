@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from lynx import __author__, __author_email__, __license__, __version__, __year__
+from lynx import __author__, __author_email__, __license__, __version__, __year__, SUITE_LABEL
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -148,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"%(prog)s {__version__} ({__year__}) by {__author__}",
+        version=f"%(prog)s {__version__}  |  {SUITE_LABEL}  ({__year__}) by {__author__}",
     )
     parser.add_argument(
         "--about",
@@ -414,9 +414,9 @@ def _cmd_about(con) -> None:
             border_style="green",
         ))
     con.print(Panel(
-        f"[bold blue]{about['name']}[/]\n"
-        f"[dim]{about['suite']}[/]\n"
-        f"[dim]Version {about['version']} ({about['year']})[/]\n\n"
+        f"[bold blue]{about['name']} v{about['version']}[/]\n"
+        f"[dim]Part of {about['suite']} v{about['suite_version']}[/]\n"
+        f"[dim]Released {about['year']}[/]\n\n"
         f"[bold]Developed by:[/] {about['author']}\n"
         f"[bold]Contact:[/]      {about['email']}\n"
         f"[bold]License:[/]      {about['license']}\n\n"
