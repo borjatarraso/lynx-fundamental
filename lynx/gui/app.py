@@ -533,6 +533,9 @@ class LynxFAGUI:
             "<Button-5>",
             lambda _: self.canvas.yview_scroll(3, "units"),
         )
+        # PageUp / PageDown (Ctrl+Home/End) — shared across every suite app.
+        from lynx_investor_core.pager import bind_tk_paging
+        bind_tk_paging(self.root, self.canvas)
 
     # ---- Welcome screen --------------------------------------------------
 

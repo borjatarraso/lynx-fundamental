@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
+from lynx_investor_core.pager import console_pager, paged_print
 from lynx.core.analyzer import run_progressive_analysis
 from lynx.core.news import download_article
 from lynx.core.reports import download_filing
@@ -139,7 +140,7 @@ def run_interactive() -> None:
             t.add_column("Category")
             for m in list_metrics():
                 t.add_row(m.key, m.full_name, m.category)
-            console.print(t)
+            paged_print(console, t)
             console.print("[dim]Use 'explain <key>' for detailed explanation.[/]")
 
         elif cmd == "explain-section":
@@ -231,7 +232,8 @@ def run_interactive() -> None:
             if not current_report:
                 console.print("[yellow]No analysis loaded. Run 'analyze <TICKER>' first.[/]")
             else:
-                display_full_report(current_report)
+                with console_pager(console):
+                    display_full_report(current_report)
 
         elif cmd == "filings":
             if not current_report or not current_report.filings:

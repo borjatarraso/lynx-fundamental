@@ -31,7 +31,7 @@ Output Should Contain
 Version Flag Shows Version
     ${result}=    Run Lynx    --version
     Output Should Contain    lynx-fundamental
-    Output Should Contain    2.0
+    Output Should Contain    3.0
     Output Should Contain    Lince Investor Suite
     Should Be Equal As Integers    ${result.rc}    0
 
