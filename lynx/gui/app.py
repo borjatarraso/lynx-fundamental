@@ -322,7 +322,10 @@ class LynxFAGUI:
         self._show_welcome()
 
         # Suite-wide theme cycling (Ctrl+T / Ctrl+Shift+T)
-        self._theme_cycler = ThemeCycler(self.root)
+        from lynx.tui.themes import HOUSE_THEMES as _HOUSE_THEMES
+        from lynx_investor_core.gui_themes import register_gui_themes
+        register_gui_themes(*_HOUSE_THEMES)
+        self._theme_cycler = ThemeCycler(self.root, start="lynx-dark")
         self._theme_cycler.apply_current()
         self.root.bind_all("<Control-t>", lambda _: self._theme_cycler.next())
         self.root.bind_all("<Control-T>", lambda _: self._theme_cycler.previous())
@@ -830,7 +833,9 @@ class LynxFAGUI:
         from lynx_investor_core.gui_themes import list_themes_by_family
         menu = tk.Menu(self.root, tearoff=0)
         current = getattr(self._theme_cycler, "current_name", "")
-        for family, names in list_themes_by_family().items():
+        sector_family = ["lynx-dark", "lynx-light"]
+        families = {"Sector": sector_family, **list_themes_by_family()}
+        for family, names in families.items():
             sub = tk.Menu(menu, tearoff=0)
             for theme_name in names:
                 label = ("\u25cf " if theme_name == current else "   ") + theme_name
@@ -844,10 +849,17 @@ class LynxFAGUI:
         menu.tk_popup(x, y)
 
     def _select_theme(self, theme_name: str) -> None:
-        """Apply *theme_name* via the existing ThemeCycler."""
-        from lynx_investor_core.gui_themes import apply_theme
-        self._theme_cycler.set(theme_name)
-        apply_theme(self.root, theme=theme_name)
+        """Apply *theme_name*, falling back to sector house themes."""
+        from lynx_investor_core.gui_themes import apply_theme, theme_by_name
+        theme = theme_by_name(theme_name)
+        if theme is None:
+            return  # silently ignore unknown
+        try:
+            self._theme_cycler.set(theme_name)
+        except ValueError:
+            # House theme is not in the Suite cycler — apply directly.
+            pass
+        apply_theme(self.root, theme=theme)
 
     def _show_controls(self) -> None:
         """Show keyboard shortcuts and controls dialog (Ctrl+P)."""
