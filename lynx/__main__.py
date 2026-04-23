@@ -1,3 +1,4 @@
+# PYTHON_ARGCOMPLETE_OK
 """Entry point for lynx-fundamental."""
 
 from lynx.cli import run_cli

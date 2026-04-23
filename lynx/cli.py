@@ -8,6 +8,16 @@ import sys
 from lynx import __author__, __author_email__, __license__, __version__, __year__, SUITE_LABEL
 
 
+def _ticker_completer(prefix, **kw):
+    """Dynamic completer that returns cached tickers for this agent's mode."""
+    try:
+        from lynx_investor_core.storage import list_cached_tickers
+        items = list_cached_tickers() or []
+        return [t["ticker"] for t in items if t["ticker"].startswith(prefix.upper())]
+    except Exception:
+        return []
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lynx-fundamental",
@@ -55,11 +65,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Testing mode: use data_test/ (isolated, always fresh, never touches production data)",
     )
 
-    parser.add_argument(
+    ident_arg = parser.add_argument(
         "identifier",
         nargs="?",
         help="Ticker symbol (e.g. AAPL) or ISIN (e.g. US0378331005)",
     )
+    ident_arg.completer = _ticker_completer
 
     # --- Interface mode ---
     ui_mode = parser.add_mutually_exclusive_group()
@@ -183,6 +194,12 @@ def build_parser() -> argparse.ArgumentParser:
 def run_cli() -> None:
     """Parse arguments and dispatch to the appropriate mode."""
     parser = build_parser()
+
+    try:
+        import argcomplete
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        pass  # argcomplete optional at runtime
 
     # Hidden features
     if "--b2m" in sys.argv:
