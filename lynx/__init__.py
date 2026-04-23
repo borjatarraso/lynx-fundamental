@@ -1,13 +1,13 @@
 """Lynx Fundamental Analysis — Value investing research tool with moat analysis."""
 
-__version__ = "5.2"
+__version__ = "5.3"
 __author__ = "Borja Tarraso"
 __author_email__ = "borja.tarraso@member.fsf.org"
 __year__ = "2026"
 __license__ = "BSD-3-Clause"
 
 SUITE_NAME = "Lince Investor Suite"
-SUITE_VERSION = "5.2"
+SUITE_VERSION = "5.3"
 SUITE_LABEL = f"{SUITE_NAME} v{SUITE_VERSION}"
 APP_NAME = "Lynx Fundamental Analysis"
 
