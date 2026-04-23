@@ -301,7 +301,7 @@ def run_interactive() -> None:
                     art = current_report.news[idx]
                     if art.url:
                         import webbrowser
-                        webbrowser.open(art.url)
+                        from lynx_investor_core.urlsafe import safe_webbrowser_open; safe_webbrowser_open(art.url)
                         console.print(
                             f"[green]Opened in browser:[/] {art.title[:60]}"
                         )

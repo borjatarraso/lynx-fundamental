@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.0] - 2026-04-23
+
+Part of **Lince Investor Suite v4.0** coordinated release.
+
+### Changed
+- Depends on `lynx-investor-core>=4.0` and uses its new URL-safety
+  helpers for every RSS-sourced URL.
+
 All notable changes to **Lynx Fundamental Analysis** are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
