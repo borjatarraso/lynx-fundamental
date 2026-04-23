@@ -136,10 +136,11 @@ class TestThemes:
     def test_theme_names_includes_customs(self):
         from lynx.tui.themes import THEME_NAMES
         assert "lynx-dark" in THEME_NAMES
-        assert "hacker" in THEME_NAMES
-        assert "dracula" in THEME_NAMES
-        assert "solarized" in THEME_NAMES
         assert "lynx-light" in THEME_NAMES
+        # Suite-wide gallery themes
+        assert "dracula" in THEME_NAMES
+        assert "matrix" in THEME_NAMES
+        assert "solarized-dark" in THEME_NAMES
 
     def test_theme_names_includes_builtins(self):
         from lynx.tui.themes import THEME_NAMES
