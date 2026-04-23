@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import webbrowser
-
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 
 from lynx_investor_core.pager import PagingAppMixin, tui_paging_bindings
+from lynx_investor_core.urlsafe import safe_webbrowser_open
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
@@ -949,16 +948,12 @@ class LynxApp(PagingAppMixin, App):
         if not article.url:
             return
 
-        try:
-            webbrowser.open(article.url)
-        except Exception:
-            pass
-
-        if not self._suppress_news_dialog:
-            self.push_screen(
-                NewsBrowserDialog(),
-                self._on_news_dialog_result,
-            )
+        if safe_webbrowser_open(article.url):
+            if not self._suppress_news_dialog:
+                self.push_screen(
+                    NewsBrowserDialog(),
+                    self._on_news_dialog_result,
+                )
 
     def _on_news_dialog_result(self, result: str) -> None:
         if result == "suppress":

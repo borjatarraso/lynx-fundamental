@@ -300,11 +300,13 @@ def run_interactive() -> None:
                 if 0 <= idx < len(current_report.news):
                     art = current_report.news[idx]
                     if art.url:
-                        import webbrowser
-                        from lynx_investor_core.urlsafe import safe_webbrowser_open; safe_webbrowser_open(art.url)
-                        console.print(
-                            f"[green]Opened in browser:[/] {art.title[:60]}"
-                        )
+                        from lynx_investor_core.urlsafe import safe_webbrowser_open
+                        if safe_webbrowser_open(art.url):
+                            console.print(
+                                f"[green]Opened in browser:[/] {art.title[:60]}"
+                            )
+                        else:
+                            console.print("[red]Refused: unsafe URL[/]")
                     else:
                         console.print("[red]No URL available for this article.[/]")
                 else:
