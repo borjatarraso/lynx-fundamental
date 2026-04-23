@@ -439,6 +439,16 @@ class LynxFAGUI:
         )
         self.btn_keys.pack(side=tk.LEFT, padx=(0, 6))
 
+        # Themes button (pops a family-grouped menu)
+        self._themes_btn = tk.Button(
+            toolbar, text=" Themes \u25bc ", font=FONT_BTN,
+            bg=BTN_SECONDARY_BG, fg=BTN_SECONDARY_FG,
+            activebackground=BG_HOVER, activeforeground=FG,
+            relief=tk.FLAT, padx=6, pady=3, cursor="hand2",
+            command=self._show_themes_menu,
+        )
+        self._themes_btn.pack(side=tk.LEFT, padx=(0, 6))
+
         # Status bar — shows progress during analysis
         self.status_var = tk.StringVar(value="")
         self.status_label = tk.Label(
@@ -814,6 +824,30 @@ class LynxFAGUI:
         sx = (win.winfo_screenwidth() - w) // 2
         sy = (win.winfo_screenheight() - h) // 2
         win.geometry(f"{w}x{h}+{sx}+{sy}")
+
+    def _show_themes_menu(self) -> None:
+        """Pop up a themes menu grouped by family."""
+        from lynx_investor_core.gui_themes import list_themes_by_family
+        menu = tk.Menu(self.root, tearoff=0)
+        current = getattr(self._theme_cycler, "current_name", "")
+        for family, names in list_themes_by_family().items():
+            sub = tk.Menu(menu, tearoff=0)
+            for theme_name in names:
+                label = ("\u25cf " if theme_name == current else "   ") + theme_name
+                sub.add_command(
+                    label=label,
+                    command=lambda n=theme_name: self._select_theme(n),
+                )
+            menu.add_cascade(label=family, menu=sub)
+        x = self._themes_btn.winfo_rootx()
+        y = self._themes_btn.winfo_rooty() + self._themes_btn.winfo_height()
+        menu.tk_popup(x, y)
+
+    def _select_theme(self, theme_name: str) -> None:
+        """Apply *theme_name* via the existing ThemeCycler."""
+        from lynx_investor_core.gui_themes import apply_theme
+        self._theme_cycler.set(theme_name)
+        apply_theme(self.root, theme=theme_name)
 
     def _show_controls(self) -> None:
         """Show keyboard shortcuts and controls dialog (Ctrl+P)."""
