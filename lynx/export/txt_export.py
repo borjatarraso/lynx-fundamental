@@ -23,6 +23,14 @@ def export_txt(report: AnalysisReport, output_path: Path) -> Path:
             display_full_report(report)
         finally:
             disp.console = original_console
+
+        # Author / signature footer (every Suite export carries it).
+        try:
+            from lynx_investor_core.author_footer import text_footer
+            from lynx import SUITE_LABEL
+            f.write(text_footer(SUITE_LABEL))
+        except ImportError:
+            pass
     finally:
         f.close()
 

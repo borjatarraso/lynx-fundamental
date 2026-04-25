@@ -188,6 +188,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explain conclusion scoring methodology (overall, valuation, profitability, solvency, growth, moat).",
     )
 
+    # Shared --language flag (us / es / it / de / fr / fa).
+    try:
+        from lynx_investor_core.translations import add_language_argument
+        add_language_argument(parser)
+    except ImportError:
+        pass
+
     return parser
 
 
@@ -238,6 +245,11 @@ def run_cli() -> None:
         return
 
     args = parser.parse_args()
+    try:
+        from lynx_investor_core.translations import apply_args as _apply_lang
+        _apply_lang(args)
+    except ImportError:
+        pass
 
     from rich.console import Console
     errc = Console(stderr=True)
