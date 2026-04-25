@@ -325,6 +325,12 @@ class LynxFAGUI:
         from lynx.tui.themes import HOUSE_THEMES as _HOUSE_THEMES
         from lynx_investor_core.gui_themes import register_gui_themes
         register_gui_themes(*_HOUSE_THEMES)
+        # Register user-saved lynx_theme JSON themes (~/.config/lynx-theme)
+        try:
+            from lynx_theme.storage import register_user_themes as _reg_user_themes
+            _reg_user_themes()
+        except Exception:
+            pass
         self._theme_cycler = ThemeCycler(self.root, start="lynx-dark")
         self._theme_cycler.apply_current()
         self.root.bind_all("<Control-t>", lambda _: self._theme_cycler.next())
