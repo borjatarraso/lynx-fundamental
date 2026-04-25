@@ -2015,6 +2015,12 @@ class LynxFAGUI:
     def run(self) -> None:
         if hasattr(self, "entry_ticker"):
             self.entry_ticker.focus_set()
+        # Bottom-right language toggle (US/ES/IT/DE/FR/FA).
+        try:
+            from lynx_investor_core.lang_widget import mount_tk_language_button
+            mount_tk_language_button(self.root)
+        except Exception:
+            pass
         self.root.mainloop()
 
 
