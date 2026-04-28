@@ -842,7 +842,16 @@ class LynxFAGUI:
         menu = tk.Menu(self.root, tearoff=0)
         current = getattr(self._theme_cycler, "current_name", "")
         sector_family = ["lynx-dark", "lynx-light"]
+        # Suite families plus a "Custom" group for user-saved themes from
+        # the Lynx Theme editor (~/.config/lynx-theme/themes/).
+        try:
+            from lynx_investor_core.gui_themes import list_user_themes as _list_user_themes
+            _user_themes = _list_user_themes()
+        except Exception:
+            _user_themes = []
         families = {"Sector": sector_family, **list_themes_by_family()}
+        if _user_themes:
+            families["Custom"] = [_ut.name for _ut in _user_themes]
         for family, names in families.items():
             sub = tk.Menu(menu, tearoff=0)
             for theme_name in names:
